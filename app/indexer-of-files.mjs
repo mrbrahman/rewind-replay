@@ -18,7 +18,7 @@ function lsRecursive(dir){
     .reduce((acc,curr)=>acc.concat(curr), []) )
 }
 
-export async function indexFilesFirstTime(collection_id){
+export async function indexCollectionFirstTime(collection_id){
   let c = db.getCollection(collection_id);
   var files = lsRecursive(c.collection_path);
 
@@ -71,7 +71,7 @@ export async function indexFiles(collection, files, inPlace){
       album = collection.album_type=='FOLDER_ALBUM' ? 
         // newly created sub folder becomes the album
         subFolder : 
-        // // album is just the date
+        // album is just the date
         dateformat(file_date, 'yyyy-mm-dd');  // TODO: timezone?
       filename = newFileName;
     }

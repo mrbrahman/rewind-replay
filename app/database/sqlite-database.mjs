@@ -63,8 +63,6 @@ export function createNewCollection(entry){
 
   let info = stmt.run(entry);
   return info.lastInsertRowid;
-
-  // TODO: return newly generated collection_id
 }
 
 export function getAllCollections(){
@@ -120,7 +118,7 @@ values
 `;
 
 export function createNewMetadata(entry){
-  var stmt =db.prepare(insertIntoMetadataStatement);
+  var stmt = db.prepare(insertIntoMetadataStatement);
   stmt.run(entry);
 }
 
