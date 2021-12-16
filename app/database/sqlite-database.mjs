@@ -27,7 +27,7 @@ export function dbSetup() {
   var stmt = db.prepare(`
     create virtual table if not exists metadata using fts5(
       collection_id, uuid, album, filename, 
-      description, filesize, ext, mimetype, 
+      description, filesize, ext, mimetype, mediatype,
       keywords, faces, objects, rating, imagesize, aspectratio,
       make, model, orientation, gpsposition, duration,
       region_applied_to_dimension_w, region_applied_to_dimension_h, region_applied_to_dimension_unit,
@@ -100,7 +100,7 @@ const insertIntoMetadataStatement = `
 insert into metadata
 (
   collection_id, uuid, album, filename, 
-  description, filesize, ext, mimetype, 
+  description, filesize, ext, mimetype, mediatype,
   keywords, faces, objects, rating, imagesize, aspectratio,
   make, model, orientation, gpsposition, duration,
   region_applied_to_dimension_w, region_applied_to_dimension_h, region_applied_to_dimension_unit,
@@ -109,7 +109,7 @@ insert into metadata
 values
 (
   @collection_id, @uuid, @album, @filename, 
-  @description, @filesize, @ext, @mimetype, 
+  @description, @filesize, @ext, @mimetype, @mediatype,
   @keywords, @faces, @objects, @rating, @imagesize, @aspectratio,
   @make, @model, @orientation, @gpsposition, @duration,
   @region_applied_to_dimension_w, @region_applied_to_dimension_h, @region_applied_to_dimension_unit,

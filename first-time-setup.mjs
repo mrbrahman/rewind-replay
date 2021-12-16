@@ -15,6 +15,7 @@ console.log("id created ", id);
 
 // verify:
 console.log("verifying collection is created... ")
-s.collections.getAllCollections();
+var colls = s.collections.getAllCollections();
+console.log(colls);
 
 s.indexer.indexCollectionFirstTime(id);

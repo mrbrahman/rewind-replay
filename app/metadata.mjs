@@ -29,6 +29,7 @@ export async function getMetadata(exiftool, file){
     filesize: tags.FileSize||null,
     ext: tags.FileName.split(".").pop().toLowerCase(),
     mimetype: tags.MIMEType||null,
+    mediatype: fileType,
     keywords: tags.Keywords ? ((typeof(tags.Keywords) == "string") ?  tags.Keywords : tags.Keywords.join(", ")) : null,
     faces: tags.RegionInfo ? tags.RegionInfo.RegionList.filter(d=>d.Type='Face').map(d=>d.Name).join(", ") : null,
     objects: tags.RegionInfo ? tags.RegionInfo.RegionList.filter(d=>d.Type!='Face').map(d=>d.Name).join(", ") : null,
