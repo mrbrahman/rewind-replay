@@ -33,7 +33,7 @@ Rewind-Replay is ... ?
 - exiftool for metadata read / write
 - sharp for image operations
 - fluent-ffmpeg for video operations
-- Use browser native features (HTMO5) to play videos
+- Use browser native features (HTML5) to play videos
 
 
 ## TODO
