@@ -8,6 +8,8 @@ Rewind-Replay is ... ?
 2. Some of us really care about our media in folders that we have meticulously curated from a long time. With any tool, we want the ability to continue to manage pics in folders.
 3. The single source of truth is the photo itself. We want all metadata, including user tags, ML based face / objects labels etc., to go back to the photo, to the extent possible.
 4. In the same vein, we also want the tool to utlize the metadata already existing in the photos.
+5. Some kind of sensible, not too constrained search is needed, even though it may (will) not be as good as Google.
+
 
 # Key Terms
 1. **Photo / Video**: The individual photo / video (duh!)
@@ -17,6 +19,21 @@ Rewind-Replay is ... ?
 
 
 # Features
+
+
+# Architecture
+## Main
+- nodejs server
+- SQLite 3 database
+- Vuejs front-end (TODO)
+
+## Supporting
+- Sqlite3 provided FTS5 for searches
+- github "like" search syntax using search-query-parser
+- exiftool for metadata read / write
+- sharp for image operations
+- fluent-ffmpeg for video operations
+- Use browser native features (HTMO5) to play videos
 
 
 ## TODO
