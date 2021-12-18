@@ -212,10 +212,11 @@ function converToSQLQueryStr(searchStr){
   delete parsedInput.exclude;
 
   // set "logical" and "facesLogical" values. These will be used during search
-  parsedInput['logical'] = parsedInput['logical'] ?
+  let logical = parsedInput['logical'] ?
     parsedInput['logical'][0].toUpperCase() : // remember we set "alwaysArray: true" in search options
     'AND'  // by default, we use AND condition
   ;
+  delete parsedInput.logical;
 
   // facesLogical valid values: OR, AND, ONLY
   // attempting to eventually implement:
@@ -224,24 +225,18 @@ function converToSQLQueryStr(searchStr){
   // ONLY: face1 and face2 must be present, and no others
   //    (this helps to identify family pics with only the required members)
 
+  // let facesLogical=''
   // if(parsedInput['faces']){
-  //   parsedInput['facesLogical'] = parsedInput['facesLogical'] ?
-  //     parsedInput['facesLogical'][0].toUpperCase() :
-  //     'OR'
-  //   ;
+  //   if(parsedInput['facesLogical']){
+  //     facesLogical = parsedInput['facesLogical'][0].toUpperCase();
+  //     delete parsedInput.facesLogical;
+  //   } else {
+  //     facesLogical = 'OR'
+  //   }
   // }
 
   console.log(parsedInput);
   const restrictSearchCols = ['album', 'keywords', 'faces', 'objects', 'mediatype', 'rating', 'make', 'model', 'file_date'];
-
-  let logical = parsedInput.logical;
-  delete parsedInput.logical;
-
-  // let facesLogical='';
-  // if (parsedInput.facesLogical){
-  //   facesLogical = parsedInput.facesLogical;
-  //   delete parsedInput.facesLogical;
-  // }
 
   // TODO: make this better?
   let conditions = [];
