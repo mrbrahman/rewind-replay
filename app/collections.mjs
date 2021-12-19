@@ -22,6 +22,10 @@ export function getAllCollections(){
   return db.getAllCollections()
 }
 
+export function getDefaultCollection(){
+  return db.getDefaultCollection()
+}
+
 export function getCollection(collection_id){
   return db.getCollection(collection_id)
 }

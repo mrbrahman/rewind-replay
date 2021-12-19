@@ -68,6 +68,8 @@ export function createNewCollection(entry){
   return info.lastInsertRowid;
 }
 
+// TODO: remove multipe parsing of listen_path
+
 export function getAllCollections(){
   // convert listen_paths back to JavaScript Array
   var stmt = db.prepare(`
@@ -89,6 +91,19 @@ export function getCollection(collection_id){
     from collections where collection_id = ?
   `)
   let output = stmt.get(collection_id);
+  output.listen_paths = JSON.parse(output.listen_paths);
+
+  return output;
+}
+
+export function getDefaultCollection(){
+  // convert listen_paths back to JavaScript Array
+  var stmt = db.prepare(`
+    select collection_id, collection_name, collection_path, album_type,
+      listen_paths, apply_folder_pattern, default_collection
+    from collections where default_collection = 1
+  `)
+  let output = stmt.get();
   output.listen_paths = JSON.parse(output.listen_paths);
 
   return output;
