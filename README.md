@@ -38,14 +38,6 @@ Rewind-Replay is ... ?
 
 ## TODO
 
-- config json
-- parameter for config file
-- use config in
-    - database path
-    - database file name
-    - thumbnails path
-    - defaults when no config is specified or value not found
-
 - Image similarity
 
 - Face recognition

@@ -1,18 +1,35 @@
-import { statSync } from 'fs';
+import * as fs from 'fs';
 import * as parser from 'search-query-parser';
 import Database from 'better-sqlite3';
+import path from 'path';
 
-const dbFile = 'MEMORIES-DATABASE.sqlite';
+import config from '../config.mjs'
+
+// use the dbFile param, if one is available
+// else see if there is a dataDir defined and create a file there
+// else just create a 'data' directory in the main folder
+const dbFile = config.dbFile || 
+  config.dataDir ? 
+    path.join(config.dataDir, 'MEMORIES-DATABASE.sqlite') :
+    path.join('data', 'MEMORIES-DATABASE.sqlite')
+;
+
+if(!fs.existsSync(path.dirname(dbFile))){
+  fs.mkdirSync(path.dirname(dbFile), {recursive: true})
+}
+
 const db = new Database(dbFile, {  }); // verbose: console.log
 
 // TODO: Since this file is growing, split this by module?
 
 export function checkDbExists(){
-  return statSync(dbFile).size > 0 ? true : false
+  return fs.statSync(dbFile).size > 0 ? true : false
 }
 
 export function dbSetup() {
-  // collections go here
+  console.log("creating database ... ");
+
+  // collections table
   var stmt = db.prepare(`
     create table if not exists collections (
       collection_id integer PRIMARY KEY AUTOINCREMENT,
@@ -26,7 +43,7 @@ export function dbSetup() {
   `);
   var info = stmt.run();
 
-  // metadata (single record per file) goes here
+  // metadata (single record per file) table
   var stmt = db.prepare(`
     create virtual table if not exists metadata using fts5(
       collection_id, uuid, album, filename,
@@ -39,7 +56,7 @@ export function dbSetup() {
   `);
   var info = stmt.run();
 
-  // object details (determined through ML) goes here
+  // object details (determined through ML) table
   var stmt = db.prepare(`
     create table object_details (
       uuid, frame, how_found,

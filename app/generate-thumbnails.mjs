@@ -2,6 +2,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {default as sharp} from 'sharp';
 
+import config from './config.mjs';
+
 const sizes = [
   // thumbnails with same aspect ratio as original image
   {height: 20,  fit: 'inside', suffix: 'fit'},  // small thubnail to give the feel of "loading"
@@ -15,7 +17,11 @@ const sizes = [
   {width: 100, height: 100, fit: 'cover', suffix: 'center'},
 ];
 
-const thumbsDir = '/home/shreyas/Projects/rewind-replay/thumbnails/'; // TODO: config
+const thumbsDir = config.thumbsDir || 
+  config.dataDir ? 
+    path.join(config.dataDir, 'thumbnails') :
+    path.join('data', 'thumbnails')
+;
 
 export async function exctractAndSaveThumbnails(imgObject){
   // read image once
@@ -24,7 +30,9 @@ export async function exctractAndSaveThumbnails(imgObject){
   // We don't want all thumbnails in one directory. Hence, create
   // sub-dirs based on the first 3 chars of the uuid.
   // If we have the uuid in the front end, we can directly go to the
-  // location of the thumbnails
+  // location of the thumbnails.
+  // Idea found at: https://stackoverflow.com/a/2994603
+
   let imageThumbsDir = path.join(
     thumbsDir,
     ...Array.from(imgObject.uuid).slice(0,3)    // 3 levels deep
@@ -37,7 +45,7 @@ export async function exctractAndSaveThumbnails(imgObject){
   var resizePromises = sizes.map(s=>{
     // return a promise
     sharp(buf)
-      .rotate()  // auto rotate based on exif Orientation
+      .rotate()  // rotate based on exif Orientation
       .resize(s)
       .toFile(path.join(
         imageThumbsDir,
@@ -47,6 +55,8 @@ export async function exctractAndSaveThumbnails(imgObject){
   });
 
   // var faceExtractPromises=[];
+
+  // TODO: extract and return image hash (to help identify dups)
 
   let start = performance.now()
   await Promise.all(resizePromises)
