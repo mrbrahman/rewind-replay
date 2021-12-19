@@ -39,7 +39,7 @@ export async function getMetadata(exiftool, file){
     aspectratio: aspectRatio,
     make: tags.Make||null,
     model: tags.Model||null,
-    orientation: tags.Orientation||tags.Rotation||null,
+    orientation: tags.Orientation||tags.Rotation||null, // TODO: update for videos after thubmanil extraction
     gpsposition: tags.GPSPosition||null,
     duration: tags.MediaDuration||null,
     region_applied_to_dimension_w: tags.RegionInfo ? 

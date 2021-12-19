@@ -5,6 +5,7 @@ import {v4 as uuidv4} from 'uuid';
 import {exiftool} from 'exiftool-vendored';
 
 import * as m from './metadata.mjs'
+import * as thumbs from './generate-thumbnails.mjs';
 import * as db from './database/sqlite-database.mjs'
 
 function lsRecursive(dir){
@@ -27,12 +28,15 @@ export async function indexCollectionFirstTime(collection_id){
 
 export async function indexFiles(collection, files, inPlace){
   let metadata = [];
+  let start = performance.now();
   for (let f of files){
+    let fileStart = performance.now();
     console.log(f.filename);
     
     let id = uuidv4();
     var p = await m.getMetadata(exiftool, f.filename);
 
+    // Step 1: Organize the file, and determine album and filename
     let album, filename;
     if(inPlace){
       // In place indexing. To be used for 
@@ -82,11 +86,20 @@ export async function indexFiles(collection, files, inPlace){
       album: album,
       filename: filename
     }
-    metadata.push(p)
+    metadata.push(p);
+
+    // Step 2: Generate thumbnails
+    if(p.mediatype == "image"){
+      thumbs.exctractAndSaveThumbnails(p)
+    }
+    
+    console.log(`${f.filename} finished in ${performance.now()-fileStart} ms`)
   }
+
+  // Step 3: Bulk update the DB
   console.log("completed " + files.length + " files")
   db.createNewMetadataBulk(metadata);
   
   exiftool.end()
+  console.log(`Total time taken ${(performance.now()-start)/1000} secs`)
 }
-
