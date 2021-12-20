@@ -13,6 +13,11 @@ export function createNewCollection(record){
       throw `${path} is not a valid path in listen path`
     }
   }
+
+  let albumTypes = ['FOLDER_ALBUM','VIRTUAL_ALBUM']
+  if(albumTypes.indexOf(record.album_type)<0){
+    throw `${record.album_type} is invalid album type. Valid values are: ${albumTypes.join(', ')}`
+  }
   
   let id = db.createNewCollection(record);
   return id;

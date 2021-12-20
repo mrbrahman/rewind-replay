@@ -34,9 +34,11 @@ function dbSetup() {
       collection_name text,
       collection_path text NOT NULL UNIQUE,
       album_type text,
-      listen_paths text,        -- stored as an array
-      apply_folder_pattern,    -- TODO: need better names?
-      default_collection integer
+      listen_paths text,        -- stored as an array (JSON)
+      apply_folder_pattern,     -- need to be 'dateformat' package compatible format
+      default_collection integer,
+
+      check (album_type in ('FOLDER_ALBUM', 'VIRTUAL_ALBUM'))
     )
   `);
   var info = stmt.run();
