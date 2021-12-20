@@ -8,7 +8,7 @@ import * as collections from './collections.mjs';
 import * as m from './metadata.mjs';
 import * as thumbs from './generate-thumbnails.mjs';
 
-import * as db from './database/indexer-db.mjs'
+import * as db from '../database/indexer-db.mjs'
 
 function lsRecursive(dir){
   let ls = fs.readdirSync(dir, { withFileTypes: true });

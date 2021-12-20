@@ -8,5 +8,5 @@ export function firstTimeSetup(){
   db.dbSetup()
 }
 
-export * as collections from './collections.mjs';
-export * as indexer from './indexer-of-files.mjs';
+export * as collections from './modules/collections.mjs';
+export * as indexer from './modules/indexer-of-files.mjs';
