@@ -4,9 +4,11 @@ import * as dateformat from 'dateformat';
 import {v4 as uuidv4} from 'uuid';
 import {exiftool} from 'exiftool-vendored';
 
-import * as m from './metadata.mjs'
+import * as collections from './collections.mjs';
+import * as m from './metadata.mjs';
 import * as thumbs from './generate-thumbnails.mjs';
-import * as db from './database/sqlite-database.mjs'
+
+import * as db from './database/indexer-db.mjs'
 
 function lsRecursive(dir){
   let ls = fs.readdirSync(dir, { withFileTypes: true });
@@ -20,7 +22,7 @@ function lsRecursive(dir){
 }
 
 export async function indexCollectionFirstTime(collection_id){
-  let c = db.getCollection(collection_id);
+  let c = collections.getCollection(collection_id);
   var files = lsRecursive(c.collection_path);
 
   await indexFiles(c, files, true)

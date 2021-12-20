@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import * as db from './database/sqlite-database.mjs';
+import * as db from './database/collection-db.mjs';
 
 export function createNewCollection(record){
   if(!isValidDir(record.collection_path)){
