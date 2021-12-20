@@ -13,7 +13,7 @@ import * as db from '../database/indexer-db.mjs'
 function lsRecursive(dir){
   let ls = fs.readdirSync(dir, { withFileTypes: true });
   let files = ls.filter(x=>!x.isDirectory())
-    .map( x=>{return {dir: dir, name: x.name, filename: path.join(dir,x.name), } } );
+    .map( x=>path.join(dir,x.name) );
   
   return files.concat(
     ls.filter(x=>x.isDirectory())
@@ -28,80 +28,92 @@ export async function indexCollectionFirstTime(collection_id){
   await indexFiles(c, files, true)
 }
 
+function placeFileInCollection(collection, filename, file_date, inPlace=false){
+  let album, albumFilename,
+    dir = path.dirname(filename);
+
+  if(inPlace){
+    // In place indexing. To be used for 
+    // 1) first time in-place indexing after setting up collection
+    // 2) collections that don't have specific listen_paths (i.e. new files come and 
+    //    sit directly in the collection_path)
+
+    album = collection.album_type=='FOLDER_ALBUM' ? 
+      // relative folder becomes the album
+      dir.replace(collection.collection_path, "").replace(/^\//, '') : 
+      // album is just the date
+      dateformat(file_date, 'yyyy-mm-dd');  // TODO: timezone?
+  
+      albumFilename = filename;
+  } else {
+    // i.e. file needs to be moved from listen_path to collection_path
+
+    // extract format:
+    // For FOLDER_ALBUM, need to move file to the corresponding folder
+    // based on pattern specified in collection.
+    // For VIRTUAL_ALBUM, files will sit in collection_path, i.e. there
+    // is no sub-folder
+
+    let subFolder = collection.album_type=='FOLDER_ALBUM' ? 
+      dateformat(file_date, collection.apply_folder_pattern) : '';
+    
+    let newFolder = path.join(collection.collection_path, subFolder);
+    let newFileName = path.join(newFolder, path.basename(filename));
+
+    if(!fs.existsSync(newFolder)){
+      fs.mkdirSync(newFolder, {recursive: true})
+    }
+    fs.renameSync(f.filename, newFileName);
+
+    album = collection.album_type=='FOLDER_ALBUM' ? 
+      // newly created sub folder becomes the album
+      subFolder : 
+      // album is just the date
+      dateformat(file_date, 'yyyy-mm-dd');  // TODO: timezone?
+    filename = newFileName;
+  }
+
+  return {
+    album: album,
+    filename: albumFilename
+  }
+}
+
 export async function indexFiles(collection, files, inPlace){
-  let metadata = [];
-  let start = performance.now();
-  for (let f of files){
+  let arrMetadata = [];
+  let indexStart = performance.now();
+
+  for (let sourceFileName of files){
     let fileStart = performance.now();
-    console.log(f.filename);
     
-    let id = uuidv4();
-    var p = await m.getMetadata(exiftool, f.filename);
+    // Step 1: Grab metadata
+    var p = await m.getMetadata(exiftool, sourceFileName);
 
-    // Step 1: Organize the file, and determine album and filename
-    let album, filename;
-    if(inPlace){
-      // In place indexing. To be used for 
-      // 1) first time in-place indexing after setting up collection
-      // 2) collections that don't have specific listen_paths (i.e. new files come and 
-      //    sit directly in the collection_path)
+    // Step 2: Use the metadata to move the file to collection
+    let f = placeFileInCollection(collection, sourceFileName, p.file_date, inPlace);
 
-      album = collection.album_type=='FOLDER_ALBUM' ? 
-        // relative folder becomes the album
-        f['dir'].replace(collection.collection_path, "").replace(/^\//, '') : 
-        // album is just the date
-        dateformat(file_date, 'yyyy-mm-dd');  // TODO: timezone?
+    // Step 3: Generate uuid, and make metadata current
+    p = {...p, ...f, uuid: uuidv4(), collection_id: collection.collection_id}
     
-      filename = f['filename']
-    } else {
-      // i.e. file needs to be moved from listen_path to collection_path
+    // TODO; Video thumbnail extraction
 
-      // extract format:
-      // For FOLDER_ALBUM, need to move file to the corresponding folder
-      // based on pattern specified in collection.
-      // For VIRTUAL_ALBUM, files will sit in collection_path, i.e. there
-      // is no sub-folder
-
-      let file_date = new Date(p.file_date);
-      let subFolder = collection.album_type=='FOLDER_ALBUM' ? 
-        dateformat(file_date, collection.apply_folder_pattern) : '';
-      
-      let newFolder = path.join(collection.collection_path, subFolder);
-      let newFileName = path.join(newFolder, f.name);
-
-      if(!fs.existsSync(newFolder)){
-        fs.mkdirSync(newFolder, {recursive: true})
-      }
-      fs.renameSync(f.filename, newFileName);
-
-      album = collection.album_type=='FOLDER_ALBUM' ? 
-        // newly created sub folder becomes the album
-        subFolder : 
-        // album is just the date
-        dateformat(file_date, 'yyyy-mm-dd');  // TODO: timezone?
-      filename = newFileName;
-    }
-
-    p = {...p, 
-      collection_id: collection.collection_id, 
-      uuid: id, 
-      album: album,
-      filename: filename
-    }
-    metadata.push(p);
-
-    // Step 2: Generate thumbnails
+    // Step 5: Generate thumbnails
     if(p.mediatype == "image"){
       thumbs.exctractAndSaveThumbnails(p)
     }
-    
-    console.log(`${f.filename} finished in ${performance.now()-fileStart} ms`)
-  }
 
-  // Step 3: Bulk update the DB
-  console.log("completed " + files.length + " files")
-  db.createNewMetadataBulk(metadata);
+    // Step 6: Create final object to be added to db
+    arrMetadata.push(p);
+
+    console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`)
+  }
+  console.log(`completed ${files.length} files in ${(performance.now()-indexStart)/1000} sec`)
+
+  // Step 7: Bulk update the DB for all files
+  let dbStart = performance.now()
+  db.createNewMetadataBulk(arrMetadata);
+  console.log(`DB Update completed ${performance.now()-dbStart} ms`)
   
   exiftool.end()
-  console.log(`Total time taken ${(performance.now()-start)/1000} secs`)
+  console.log(`Total time taken ${(performance.now()-indexStart)/1000} secs`)
 }
