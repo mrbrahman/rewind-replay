@@ -19,11 +19,12 @@ if(!fs.existsSync(path.dirname(dbFile))){
 
 export const db = new Database(dbFile, {  }); // verbose: console.log
 
-export function checkDbExists(){
-  return fs.statSync(dbFile).size > 0 ? true : false
+// for first time run setup db
+if(fs.statSync(dbFile).size == 0){
+  dbSetup()
 }
 
-export function dbSetup() {
+function dbSetup() {
   console.log("creating database ... ");
 
   // collections table
