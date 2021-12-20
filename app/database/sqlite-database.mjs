@@ -3,7 +3,7 @@ import * as parser from 'search-query-parser';
 import Database from 'better-sqlite3';
 import path from 'path';
 
-import config from '../config.mjs'
+import {config} from '../config.mjs'
 
 // use the dbFile param, if one is available
 // else see if there is a dataDir defined and create a file there

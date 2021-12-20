@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {default as sharp} from 'sharp';
 
-import config from './config.mjs';
+import {config} from './config.mjs';
 
 const sizes = [
   // thumbnails with same aspect ratio as original image
@@ -14,7 +14,7 @@ const sizes = [
 
   // square thumbnails
   {width: 50,  height: 50,  fit: 'cover', suffix: 'center'},
-  {width: 100, height: 100, fit: 'cover', suffix: 'center'},
+  // {width: 100, height: 100, fit: 'cover', suffix: 'center'},
 ];
 
 const thumbsDir = config.thumbsDir || 
