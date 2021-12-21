@@ -21,9 +21,16 @@ values
 )
 `;
 
+function transformMetadataToDb(row){
+  ['faces','objects'].forEach(c=>{
+    row[c] = JSON.stringify(row[c])
+  });
+  return row;
+}
+
 export function createNewMetadata(entry){
   var stmt = db.prepare(insertIntoMetadataStatement);
-  stmt.run(entry);
+  stmt.run( transformMetadataToDb(entry) );
 }
 
 export function createNewMetadataBulk(entries){
@@ -32,7 +39,7 @@ export function createNewMetadataBulk(entries){
   let insertMany = db.transaction(
     function(records){
       for (let entry of records) {
-        stmt.run(entry);
+        stmt.run( transformMetadataToDb(entry) );
       }
     }
   );
