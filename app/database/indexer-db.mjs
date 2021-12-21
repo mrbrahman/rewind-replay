@@ -39,3 +39,36 @@ export function createNewMetadataBulk(entries){
 
   insertMany(entries)
 }
+
+const insertIntoObjectDetailsStatement = `
+insert into object_details
+(
+  uuid, frame, how_found,
+  region_name, region_type,
+  region_area_x, region_area_y,
+  region_area_w, region_area_h,
+  region_area_unit
+)
+values
+(
+  @uuid, @frame, @how_found,
+  @region_name, @region_type,
+  @region_area_x, @region_area_y,
+  @region_area_w, @region_area_h,
+  @region_area_unit
+)
+`;
+
+export function createNewObjectDetailsBulk(entries){
+  var stmt = db.prepare(insertIntoObjectDetailsStatement);
+
+  let insertMany = db.transaction(
+    function(records){
+      for (let entry of records) {
+        stmt.run(entry);
+      }
+    }
+  );
+
+  insertMany(entries)
+}

@@ -3,7 +3,7 @@ export async function getMetadata(exiftool, file){
   let tags = await exiftool.read(file);
 
   let fileType = (tags["MIMEType"]||"x").split("/")[0],
-    w=tags.ImageWidth, h=tags.ImageHeight,
+    w=tags.ImageWidth||0, h=tags.ImageHeight||0,
     aspectRatio=0;
 
   // we'll be rotating the thumbnails where appliable
@@ -36,6 +36,9 @@ export async function getMetadata(exiftool, file){
     xmpregion: tags.RegionInfo,
     rating: tags.Rating||null,
     imagesize: tags.ImageSize||null,
+    ImageWidth: tags.ImageWidth||null,   // not sent to db
+    ImageHeight: tags.ImageHeight||null, // not sent to db
+    software: tags.Software||null,       // TODO: new column in db metadata table
     aspectratio: aspectRatio,
     make: tags.Make||null,
     model: tags.Model||null,

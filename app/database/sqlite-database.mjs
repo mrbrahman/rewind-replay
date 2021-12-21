@@ -62,7 +62,8 @@ function dbSetup() {
       uuid, frame, how_found,
       region_name text, region_type text,
       region_area_x real, region_area_y real,
-      region_area_w real, region_area_h real
+      region_area_w real, region_area_h real,
+      region_area_unit text
     )
   `);
   var info = stmt.run();

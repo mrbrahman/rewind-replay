@@ -80,10 +80,11 @@ function placeFileInCollection(collection, filename, file_date, inPlace=false){
 }
 
 export async function indexFiles(collection, files, inPlace){
-  let arrMetadata = [];
+  let arrMetadata = [], objectMetadata = [];
   let indexStart = performance.now();
 
   for (let sourceFileName of files){
+    console.log(sourceFileName);
     let fileStart = performance.now();
     
     // Step 1: Grab metadata
@@ -104,6 +105,20 @@ export async function indexFiles(collection, files, inPlace){
 
     // Step 6: Create final object to be added to db
     arrMetadata.push(p);
+    if(p.xmpregion){
+      p.xmpregion.RegionList.forEach(o=>objectMetadata.push({
+        uuid: p.uuid,
+        frame: '', // TODO: check why I created this field
+        how_found: p.software,
+        region_name: o.Name,
+        region_type: o.Type,
+        region_area_x: o.Area.X,
+        region_area_y: o.Area.Y,
+        region_area_w: o.Area.W,
+        region_area_h: o.Area.H,
+        region_area_unit: o.Area.Unit
+      }));
+    }
 
     console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`)
   }
@@ -112,6 +127,7 @@ export async function indexFiles(collection, files, inPlace){
   // Step 7: Bulk update the DB for all files
   let dbStart = performance.now()
   db.createNewMetadataBulk(arrMetadata);
+  db.createNewObjectDetailsBulk(objectMetadata);
   console.log(`DB Update completed ${performance.now()-dbStart} ms`)
   
   exiftool.end()
