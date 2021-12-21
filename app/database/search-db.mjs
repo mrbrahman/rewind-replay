@@ -98,7 +98,7 @@ function converToSQLQueryStr(searchStr){
   //   }
   // }
 
-  console.log(parsedInput);
+  console.error(parsedInput);
   const restrictSearchCols = ['album', 'keywords', 'faces', 'objects', 'mediatype', 'rating', 'make', 'model', 'file_date'];
 
   // TODO: make this better?
@@ -134,18 +134,18 @@ export function runSearch(collection_id, searchStr){
 
   if(searchStr){
     let parsedCondition = converToSQLQueryStr(searchStr);
-    console.log(parsedCondition);
+    console.error(parsedCondition);
 
     filters.push(`metadata MATCH '${parsedCondition}'`)
   }
 
   let sql = `
-  select *
+  select filename
     -- uuid, album, filename, aspectratio, mimetype
   from metadata
   where ${filters.join(' and ')}
   `
-  console.log(sql)
+  console.error(sql)
   var stmt = db.prepare(sql)
   
   return stmt.all()
