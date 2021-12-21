@@ -23,9 +23,18 @@ const thumbsDir = config.thumbsDir ||
     path.join('data', 'thumbnails')
 ;
 
-export async function exctractAndSaveThumbnails(imgObject){
+// TODO: Should face extraction be moved to a separate file?
+const facesDir = config.facesDir || 
+  config.dataDir ? 
+    path.join(config.dataDir, 'faces') :
+    path.join('data', 'faces')
+;
+
+export async function createAndSaveThumbnails(imgObject){
   // read image once
   let buf = fs.readFileSync(imgObject.filename);
+
+  // image thumbnails creation
 
   // We don't want all thumbnails in one directory. Hence, create
   // sub-dirs based on the first 3 chars of the uuid.
@@ -42,7 +51,7 @@ export async function exctractAndSaveThumbnails(imgObject){
     fs.mkdirSync(imageThumbsDir, {recursive: true})
   }
 
-  var resizePromises = sizes.map(s=>{
+  let resizePromises = sizes.map(s=>{
     // return a promise
     sharp(buf)
       .rotate()  // rotate based on exif Orientation
@@ -54,11 +63,54 @@ export async function exctractAndSaveThumbnails(imgObject){
     ;
   });
 
-  // var faceExtractPromises=[];
+  // Face extraction
+  let faceExtractPromises=[];
+  
+  if(imgObject.xmpregion
+    && imgObject.xmpregion.RegionList.filter(d=>d.Type=='Face').length > 0
+    && imgObject.xmpregion.AppliedToDimensions.Unit == 'pixel') // TODO: don't know what to do with others just yet
+  {
+    let {W, H} = imgObject.xmpregion.AppliedToDimensions;
+
+    if(W != imgObject.ImageWidth || H != imgObject.ImageHeight){
+      // TODO: what should we do when RegionAppliedToDimensions don't match image height and width?
+      console.warn(`${imgObject.filename} has different region diemnsions! Actual ${imgObject.ImageWidth}x${imgObject.ImageWidth} vs ${W}x${H}`)
+    } 
+
+    let faces = imgObject.xmpregion.RegionList.filter(d=>d.Type=='Face');
+    for(let face of faces){
+
+      let faceDir = path.join(facesDir, face.Name);
+      if(!fs.existsSync(faceDir)){
+        fs.mkdirSync(faceDir, {recursive: true})
+      }
+
+      // Note: xmp stores X and Y as center of the area
+      let [left, width] = [face.Area.X-face.Area.W/2, face.Area.W].map(x=>Math.floor(x*W))
+      let [top, height] = [face.Area.Y-face.Area.H/2, face.Area.H].map(x=>Math.floor(x*H))
+      console.log(`${imgObject.filename} extracting ${left} ${top} ${width} ${height} for ${face.Name}`);
+      
+      // add a promise
+      let facePromise = sharp(buf)
+        .extract({
+          left: left,
+          top: top,
+          width: width,
+          height: height
+        })
+        // rotate the image. need to specify orientation, since we lost it during extract
+        .rotate(imgObject.Orientation)
+        // TODO: same face appearing multiple times in the image? for e.g a photo in a photo?
+        .toFile(path.join(faceDir, `${imgObject.uuid}.jpg`))
+      ;
+      faceExtractPromises.push(facePromise);
+    }
+  }
+  
+  let start = performance.now();
+  await Promise.all([...resizePromises, ...faceExtractPromises]);
 
   // TODO: extract and return image hash (to help identify dups)
 
-  let start = performance.now()
-  await Promise.all(resizePromises)
   console.log(`${imgObject.filename} generated ${sizes.length} thumbnails in ${performance.now()-start} ms`)
 }

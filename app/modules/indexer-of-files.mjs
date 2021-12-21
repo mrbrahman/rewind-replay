@@ -98,9 +98,9 @@ export async function indexFiles(collection, files, inPlace){
     
     // TODO; Video thumbnail extraction
 
-    // Step 5: Generate thumbnails
+    // Step 5: Generate thumbnails, extract faces
     if(p.mediatype == "image"){
-      thumbs.exctractAndSaveThumbnails(p)
+      await thumbs.createAndSaveThumbnails(p)
     }
 
     // Step 6: Create final object to be added to db
@@ -109,7 +109,7 @@ export async function indexFiles(collection, files, inPlace){
       p.xmpregion.RegionList.forEach(o=>objectMetadata.push({
         uuid: p.uuid,
         frame: '', // TODO: check why I created this field
-        how_found: p.software,
+        how_found: p.software,    // legacy software that created this
         region_name: o.Name,
         region_type: o.Type,
         region_area_x: o.Area.X,
