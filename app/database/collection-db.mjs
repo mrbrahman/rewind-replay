@@ -1,10 +1,20 @@
 import { db } from './sqlite-database.mjs';
 
-export function createNewCollection(entry){
-  // convert listen path to SQLite json_array friendly format
-  entry.listen_paths = JSON.stringify(entry.listen_paths)
-  console.log(entry);
+function transformEntryToDb(row){
+  ['listen_paths'].map(c=>{
+    row[c] = JSON.stringify(row[c])
+  });
+  return row;
+}
 
+function transformEntryFromDb(row){
+  ['listen_paths'].map(c=>{
+    row[c] = JSON.parse(row[c])
+  })
+  return row;
+}
+
+export function createNewCollection(entry){
   var stmt = db.prepare(`
     insert into collections
     (collection_name, collection_path, album_type, listen_paths, apply_folder_pattern, default_collection)
@@ -12,11 +22,9 @@ export function createNewCollection(entry){
     (@collection_name, @collection_path, @album_type, json(@listen_paths), @apply_folder_pattern, @default_collection)
   `);
 
-  let info = stmt.run(entry);
+  let info = stmt.run( transformEntryToDb(entry)) ;
   return info.lastInsertRowid;
 }
-
-// TODO: remove multipe parsing of listen_path
 
 export function getAllCollections(){
   // convert listen_paths back to JavaScript Array
@@ -26,9 +34,7 @@ export function getAllCollections(){
     from collections
   `)
   let output = stmt.all();
-  output.forEach(x => x.listen_paths = JSON.parse(x.listen_paths));
-  return output;
-  1;
+  return output.map(transformEntryFromDb)
 }
 
 export function getCollection(collection_id){
@@ -39,9 +45,7 @@ export function getCollection(collection_id){
     from collections where collection_id = ?
   `)
   let output = stmt.get(collection_id);
-  output.listen_paths = JSON.parse(output.listen_paths);
-
-  return output;
+  return transformEntryFromDb(output);
 }
 
 export function getDefaultCollection(){
@@ -52,9 +56,7 @@ export function getDefaultCollection(){
     from collections where default_collection = 1
   `)
   let output = stmt.get();
-  output.listen_paths = JSON.parse(output.listen_paths);
-
-  return output;
+  return transformEntryFromDb(output);
 }
 
 export function updateDefaultCollection(entries){
