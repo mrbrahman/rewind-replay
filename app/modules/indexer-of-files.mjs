@@ -6,7 +6,7 @@ import {exiftool} from 'exiftool-vendored';
 
 import * as collections from './collections.mjs';
 import * as m from './metadata.mjs';
-import * as thumbs from './generate-thumbnails.mjs';
+import * as thumbs from './extract-thumbnails-faces.mjs';
 
 import * as db from '../database/indexer-db.mjs'
 
