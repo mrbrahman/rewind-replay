@@ -23,11 +23,50 @@ function lsRecursive(dir){
 
 export async function indexCollectionFirstTime(collection_id){
   let c = collections.getCollection(collection_id);
-  var files = lsRecursive(c.collection_path);
+  let files = lsRecursive(c.collection_path);
+  let indexStart = performance.now(), indexResult = [];
 
-  await indexFiles(c, files, true)
+  for(let f of files){
+    let indexedData = await indexFile(c, f, true);
+    indexResult.push(indexedData);
+  }
+
+  dbUpdate(indexResult)
+  
+  // TODO: place this properly
+  exiftool.end();
+  console.log(`Total time taken ${(performance.now()-indexStart)/1000} secs`)
 }
 
+function dbUpdate(arrMetadata){
+  let objectMetadata = [];
+  
+  let dbStart = performance.now();
+  db.createNewMetadataBulk(arrMetadata);
+
+  arrMetadata.forEach(d=>{
+    if(d.xmpregion){
+      d.xmpregion.RegionList.forEach(o=>objectMetadata.push({
+        uuid: d.uuid,
+        frame: '', // TODO: check why I created this field
+        how_found: d.software,    // legacy software that created this
+        region_name: o.Name,
+        region_type: o.Type,
+        region_area_x: o.Area.X,
+        region_area_y: o.Area.Y,
+        region_area_w: o.Area.W,
+        region_area_h: o.Area.H,
+        region_area_unit: o.Area.Unit
+      }));
+    }
+  });
+  
+  if(objectMetadata.length>0){
+    db.createNewObjectDetailsBulk(objectMetadata);
+  }
+  console.log(`DB Update completed ${performance.now()-dbStart} ms`)
+}
+  
 function placeFileInCollection(collection, filename, file_date, inPlace=false){
   let album, albumFilename,
     dir = path.dirname(filename);
@@ -79,57 +118,31 @@ function placeFileInCollection(collection, filename, file_date, inPlace=false){
   }
 }
 
-export async function indexFiles(collection, files, inPlace){
-  let arrMetadata = [], objectMetadata = [];
-  let indexStart = performance.now();
-
-  for (let sourceFileName of files){
-    console.log(sourceFileName);
-    let fileStart = performance.now();
-    
-    // Step 1: Grab metadata
-    var p = await m.getMetadata(exiftool, sourceFileName);
-
-    // Step 2: Use the metadata to move the file to collection
-    let f = placeFileInCollection(collection, sourceFileName, p.file_date, inPlace);
-
-    // Step 3: Generate uuid, and make metadata current
-    p = {...p, ...f, uuid: uuidv4(), collection_id: collection.collection_id}
-    
-    // TODO; Video thumbnail extraction
-
-    // Step 5: Generate thumbnails, extract faces
-    if(p.mediatype == "image"){
-      await thumbs.createAndSaveThumbnails(p)
-    }
-
-    // Step 6: Create final object to be added to db
-    arrMetadata.push(p);
-    if(p.xmpregion){
-      p.xmpregion.RegionList.forEach(o=>objectMetadata.push({
-        uuid: p.uuid,
-        frame: '', // TODO: check why I created this field
-        how_found: p.software,    // legacy software that created this
-        region_name: o.Name,
-        region_type: o.Type,
-        region_area_x: o.Area.X,
-        region_area_y: o.Area.Y,
-        region_area_w: o.Area.W,
-        region_area_h: o.Area.H,
-        region_area_unit: o.Area.Unit
-      }));
-    }
-
-    console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`)
-  }
-  console.log(`completed ${files.length} files in ${(performance.now()-indexStart)/1000} sec`)
-
-  // Step 7: Bulk update the DB for all files
-  let dbStart = performance.now()
-  db.createNewMetadataBulk(arrMetadata);
-  db.createNewObjectDetailsBulk(objectMetadata);
-  console.log(`DB Update completed ${performance.now()-dbStart} ms`)
+export async function indexFile(collection, sourceFileName, inPlace){
+  // indexing is a series of steps, where the latter steps
+  // are dependent on former steps
   
-  exiftool.end()
-  console.log(`Total time taken ${(performance.now()-indexStart)/1000} secs`)
+  let arrMetadata = [], objectMetadata = [];
+  
+  console.log(`Indexing ${sourceFileName}`);
+  let fileStart = performance.now();
+  
+  // Step 1: Read metadata from file
+  var p = await m.getMetadata(exiftool, sourceFileName);
+
+  // Step 2: Use the metadata to move the file to collection
+  let f = placeFileInCollection(collection, sourceFileName, p.file_date, inPlace);
+
+  // Step 3: Generate uuid, and make metadata current
+  p = {...p, ...f, uuid: uuidv4(), collection_id: collection.collection_id}
+  
+  // TODO; Step 4: Video thumbnail extraction
+
+  // Step 5: Generate thumbnails, extract faces ()
+  if(p.mediatype == "image"){
+    await thumbs.createAndSaveThumbnails(p)
+  }
+
+  console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
+  return p;
 }
