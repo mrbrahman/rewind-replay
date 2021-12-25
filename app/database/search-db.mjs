@@ -140,7 +140,7 @@ export function runSearch(collection_id, searchStr){
   }
 
   let sql = `
-  select filename
+  select *
     -- uuid, album, filename, aspectratio, mimetype
   from metadata
   where ${filters.join(' and ')}

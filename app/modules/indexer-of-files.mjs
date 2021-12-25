@@ -122,8 +122,6 @@ export async function indexFile(collection, sourceFileName, inPlace){
   // indexing is a series of steps, where the latter steps
   // are dependent on former steps
   
-  let arrMetadata = [], objectMetadata = [];
-  
   console.log(`Indexing ${sourceFileName}`);
   let fileStart = performance.now();
   
