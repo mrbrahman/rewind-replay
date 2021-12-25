@@ -1,25 +1,39 @@
 export function PromiseQueue(){
-  var maxConcurrency=1, stickToInsertOrder=false, autoStart=true;
+  var maxConcurrency=1, processInInsertOrder=false, autoStart=true;
   let queue=[], processingCnt=0, pendingCnt=0, completedCnt=0, failedCnt=0, paused=false;
   
   function my(){
     // nothing much to do here
   }
 
+  // need to call this as: p.enqueue(()=>fun(arg))
+  // otherwise, function will get executed immediately, and promise will get resolved!
   my.enqueue = function(promiseGenerator){
     queue.push(promiseGenerator); // assume it is a promise
     pendingCnt++;
     if(autoStart)
       dequeue();
     
-    return my; // ??
+    return my; // TODO: decide??
+  }
+
+  my.enqueueMany = function(promiseGenerators){
+    noOfEntries = promiseGenerators.length;
+    queue.push(...promiseGenerators);
+    // TODO: check/read-up performance of spread above vs. 
+    //    Array.prototype.push.apply(queue, promiseGenerators);
+    pendingCnt+=noOfEntries;
+    if(autoStart)
+      dequeue();
+
+    return my; // TODO: decide?
   }
 
   // this one is not exposed
   let dequeue = function(){
     if (!paused && processingCnt<maxConcurrency && queue.length>0){
       processingCnt++; pendingCnt--;
-      let item = stickToInsertOrder ? queue.shift() : queue.pop();
+      let item = processInInsertOrder ? queue.shift() : queue.pop();
       
       item()
         .then(returnValue=>{
@@ -54,8 +68,8 @@ export function PromiseQueue(){
     return arguments.length ? (maxConcurrency = _, my): maxConcurrency;
   }
 
-  my.stickToInsertOrder = function(_){
-    return arguments.length ? (stickToInsertOrder = _, my): stickToInsertOrder;
+  my.processInInsertOrder = function(_){
+    return arguments.length ? (processInInsertOrder = _, my): processInInsertOrder;
   }
 
   my.autoStart = function(_){
@@ -64,7 +78,7 @@ export function PromiseQueue(){
 
   my.stats = function(){
     return {
-      processingCnt, pendingCnt, completedCnt, failedCnt
+      processingCnt, pendingCnt, completedCnt, failedCnt, paused
     }
   }
 
