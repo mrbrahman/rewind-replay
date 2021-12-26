@@ -39,31 +39,8 @@ export async function indexCollectionFirstTime(collection_id){
 }
 
 function dbUpdate(arrMetadata){
-  let objectMetadata = [];
-  
   let dbStart = performance.now();
   db.createNewMetadataBulk(arrMetadata);
-
-  arrMetadata.forEach(d=>{
-    if(d.xmpregion){
-      d.xmpregion.RegionList.forEach(o=>objectMetadata.push({
-        uuid: d.uuid,
-        frame: '', // TODO: check why I created this field
-        how_found: d.software,    // legacy software that created this
-        region_name: o.Name,
-        region_type: o.Type,
-        region_area_x: o.Area.X,
-        region_area_y: o.Area.Y,
-        region_area_w: o.Area.W,
-        region_area_h: o.Area.H,
-        region_area_unit: o.Area.Unit
-      }));
-    }
-  });
-  
-  if(objectMetadata.length>0){
-    db.createNewObjectDetailsBulk(objectMetadata);
-  }
   console.log(`DB Update completed ${performance.now()-dbStart} ms`)
 }
   

@@ -21,32 +21,6 @@ values
 )
 `;
 
-function transformMetadataToDb(row){
-  ['faces','objects'].forEach(c=>{
-    row[c] = JSON.stringify(row[c])
-  });
-  return row;
-}
-
-export function createNewMetadata(entry){
-  var stmt = db.prepare(insertIntoMetadataStatement);
-  stmt.run( transformMetadataToDb(entry) );
-}
-
-export function createNewMetadataBulk(entries){
-  var stmt = db.prepare(insertIntoMetadataStatement);
-
-  let insertMany = db.transaction(
-    function(records){
-      for (let entry of records) {
-        stmt.run( transformMetadataToDb(entry) );
-      }
-    }
-  );
-
-  insertMany(entries)
-}
-
 const insertIntoObjectDetailsStatement = `
 insert into object_details
 (
@@ -66,13 +40,43 @@ values
 )
 `;
 
-export function createNewObjectDetailsBulk(entries){
-  var stmt = db.prepare(insertIntoObjectDetailsStatement);
+function transformMetadataToDb(row){
+  ['faces','objects'].forEach(c=>{
+    row[c] = JSON.stringify(row[c])
+  });
+  return row;
+}
 
+export function createNewMetadataBulk(entries){
+  var metadataStmt = db.prepare(insertIntoMetadataStatement);
+  var objectDetailsStmt = db.prepare(insertIntoObjectDetailsStatement)
+  
   let insertMany = db.transaction(
     function(records){
+      let objectMetadata = [];
+
       for (let entry of records) {
-        stmt.run(entry);
+        metadataStmt.run( transformMetadataToDb(entry) );
+        
+        if(entry.xmpregion){
+          // TODO: create transformObjectDetailsToDb? what about uuid?
+          entry.xmpregion.RegionList.forEach(o=>objectMetadata.push({
+            uuid: entry.uuid,
+            frame: '',                    // TODO: check why I created this field
+            how_found: entry.software,    // legacy software that created this
+            region_name: o.Name,
+            region_type: o.Type,
+            region_area_x: o.Area.X,
+            region_area_y: o.Area.Y,
+            region_area_w: o.Area.W,
+            region_area_h: o.Area.H,
+            region_area_unit: o.Area.Unit
+          }));
+        }
+      }
+
+      for (let entry of objectMetadata){
+        objectDetailsStmt.run(entry)
       }
     }
   );
