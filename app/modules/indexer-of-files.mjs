@@ -4,6 +4,8 @@ import * as dateformat from 'dateformat';
 import {v4 as uuidv4} from 'uuid';
 import {exiftool} from 'exiftool-vendored';
 
+import {config} from '../config.mjs'
+
 import * as collections from './collections.mjs';
 import * as m from './metadata.mjs';
 import * as thumbs from './extract-thumbnails-faces.mjs';
@@ -27,23 +29,15 @@ export async function indexCollectionFirstTime(collection_id){
   let indexStart = performance.now(), indexResult = [];
 
   for(let f of files){
-    let indexedData = await indexFile(c, f, true);
-    indexResult.push(indexedData);
+    await indexFile(c, f, true);
   }
-
-  dbUpdate(indexResult)
   
   // TODO: place this properly
   exiftool.end();
   console.log(`Total time taken ${(performance.now()-indexStart)/1000} secs`)
 }
 
-function dbUpdate(arrMetadata){
-  let dbStart = performance.now();
-  db.createNewMetadataBulk(arrMetadata);
-  console.log(`DB Update completed ${performance.now()-dbStart} ms`)
-}
-  
+
 function placeFileInCollection(collection, filename, file_date, inPlace=false){
   let album, albumFilename,
     dir = path.dirname(filename);
@@ -117,6 +111,8 @@ export async function indexFile(collection, sourceFileName, inPlace){
   if(p.mediatype == "image"){
     await thumbs.createAndSaveThumbnails(p)
   }
+
+  db.dbMetadata.add(p);
 
   console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
   return p;
