@@ -1,4 +1,15 @@
-export function PromiseQueue(){
+/*
+  ParallelProcesses
+
+  Run processes (functions) in parallel using controlled concurrency,
+  with the ability the change concurrency even as the processes are running!
+
+  Note: Promises are used to enable concurrent runs. However, at the end of
+  promise completion, a promise is NOT returned (unlike the conventional way).
+  TODO: Instead the result is emitted as a event.
+*/
+
+export function ParallelProcesses(){
   var maxConcurrency=1, processInInsertOrder=false, autoStart=true;
   let queue=[], processingCnt=0, pendingCnt=0, completedCnt=0, failedCnt=0, paused=false;
   

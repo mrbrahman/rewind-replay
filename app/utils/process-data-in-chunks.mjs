@@ -1,4 +1,4 @@
-function ProcessInChunks(){
+export function ProcessDataInChunks(){
   var arr=[], maxItemsBeforeScoop=100, maxWaitTimeBeforeScoopMS=5000, timer;
   function my(){
 
@@ -18,20 +18,22 @@ function ProcessInChunks(){
 
   resetTimer = function(){
     clearTimeout(timer)
-    timer = setTimeout(doDbTask, maxWaitTimeBeforeScoopMS)
+    timer = setTimeout(doTask, maxWaitTimeBeforeScoopMS)
   }
 
-  doDbTask = function(){
+  doTask = function(){
     clearTimeout(timer);
     let scoop = arr.splice(0, arr.length);
+    // don't care about return value of promise
+    // promise is used only for async / non-blocking work
     invokeFunction(scoop)
-      .then(console.log('done'))
+      .then(console.log('done')); // TODO: emit return value?
     ;
   }
 
   process = function(){
     if(arr.length >= maxItemsBeforeScoop){
-      doDbTask()
+      doTask()
     }
   }
 
