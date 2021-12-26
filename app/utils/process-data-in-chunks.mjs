@@ -13,7 +13,7 @@ export function ProcessDataInChunks(){
     arr.push(e);
     resetTimer();
     process();
-    //return arr.length;
+    return my;  // enable chaining
   }
 
   resetTimer = function(){
