@@ -4,8 +4,6 @@ import * as dateformat from 'dateformat';
 import {v4 as uuidv4} from 'uuid';
 import {exiftool} from 'exiftool-vendored';
 
-import {config} from '../config.mjs'
-
 import * as collections from './collections.mjs';
 import * as m from './metadata.mjs';
 import * as thumbs from './extract-thumbnails-faces.mjs';
