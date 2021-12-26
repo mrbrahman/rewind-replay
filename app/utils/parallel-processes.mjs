@@ -25,7 +25,7 @@ export function ParallelProcesses(){
     if(autoStart)
       dequeue();
     
-    return my; // TODO: decide??
+    return my;
   }
 
   my.enqueueMany = function(promiseGenerators){
@@ -37,7 +37,7 @@ export function ParallelProcesses(){
     if(autoStart)
       dequeue();
 
-    return my; // TODO: decide?
+    return my;
   }
 
   // this one is not exposed

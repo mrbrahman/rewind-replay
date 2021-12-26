@@ -110,8 +110,9 @@ export async function indexFile(collection, sourceFileName, inPlace){
     await thumbs.createAndSaveThumbnails(p)
   }
 
+  // Step 6: Make an entry in db
   db.dbMetadata.add(p);
 
   console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
-  return p;
+  // return p;   TODO: verify before remove the statement
 }

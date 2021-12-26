@@ -59,8 +59,3 @@ export function ProcessDataInChunks(){
   return my;
 }
 
-// TODO
-// var createMetadataDbInChunks = ProcessInChunks().invokeFunction((_)=>db.createNewMetadataBulk(_))
-
-// indexer-of-files
-// createMetadataDbInChunks.add(p)
