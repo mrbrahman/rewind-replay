@@ -1,6 +1,15 @@
+import {EventEmitter} from 'events';
+
 import {config} from '../config.mjs'
 import { db } from './sqlite-database.mjs';
 import {ProcessDataInChunks as chunks} from '../utils/process-data-in-chunks.mjs'
+
+class EmitterClass extends EventEmitter {};
+export const dbEvents = new EmitterClass();
+
+dbEvents.on('ran', (_)=>{
+  console.log(`DB Update ran. ${_} entries`)
+})
 
 const insertIntoMetadataStatement = `
 insert into metadata
@@ -52,6 +61,8 @@ function transformMetadataToDb(row){
 }
 
 async function createNewMetadataBulk(entries){
+  let start = performance.now();
+
   let insertMany = db.transaction(
     function(records){
       let objectMetadata = [];
@@ -64,7 +75,7 @@ async function createNewMetadataBulk(entries){
           entry.xmpregion.RegionList.forEach(o=>objectMetadata.push({
             uuid: entry.uuid,
             frame: '',                    // TODO: future use. may be this will help for video files?
-            how_found: entry.software,    // legacy software that created this
+            how_found: entry.software,    // software that found this
             region_name: o.Name,
             region_type: o.Type,
             region_area_x: o.Area.X,
@@ -82,12 +93,15 @@ async function createNewMetadataBulk(entries){
     }
   );
 
-  insertMany(entries)
+  insertMany(entries);
+  console.log(`DB update: Completed ${entries.length} entries in ${performance.now()-start} ms`)
+  return entries.length
 }
 
-// expose a function to make db entries in "chunks"
+// expose a function to perform db activities in "chunks"
 export const dbMetadata = chunks()
   .maxWaitTimeBeforeScoopMS(config.dbUpdateTimeout||3000)
   .maxItemsBeforeScoop(config.dbUpdateChunk||500)
+  .emitter(dbEvents)
   .invokeFunction( (_)=>createNewMetadataBulk(_) )
 ;
