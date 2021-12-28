@@ -1,17 +1,30 @@
+/*
+  Process Data in Chunks
+
+  To aid in peformance of certain things, (e.g. insert data into SQLite) some operations
+  are better when they are performed in bulk. This utlity enables exactly that.
+
+  Setup the function for a specific usage by configuring "how much" to accumulate 
+  (maxItemsBeforeScoop) before invoking the required function. Also, an idle time 
+  can be specified (maxWaitTimeBeforeScoopMS) after which the function is invoked anyway. 
+  Additionally, in case of emergencies (e.g. application shutting down)
+  any unsaved work needs to be saved immediately, and the user can utlize runNow() for that purpose.
+
+  An emitter can also be configured to listen to 'ran' events
+
+  Note: Promises are used to enable concurrent runs. However, at the end of
+  promise completion, a promise is NOT returned (unlike the conventional way).
+
+*/
 
 import {EventEmitter} from 'events';
 
-
 export function ProcessDataInChunks(){
   var arr=[], maxItemsBeforeScoop=100, maxWaitTimeBeforeScoopMS=5000, timer, invokeFunction, emitter;
+  
   function my(){
-
+    // nothing much to do here
   }
-
-  // invokeFunction = async function(){
-  //   // dummy initiator function
-  //   // needs to be set by the user
-  // }
 
   my.add = function(e){
     arr.push(e);
