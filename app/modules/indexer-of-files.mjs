@@ -41,14 +41,12 @@ function lsRecursive(dir){
 export async function indexCollectionFirstTime(collection_id){
   let c = collections.getCollection(collection_id);
   let files = lsRecursive(c.collection_path);
-  let indexStart = performance.now(), indexResult = [];
-
+  
   indexerQueue.enqueueMany(
     files.map(f=>{
       return ()=>indexFile(c, f, true)
     })
   );
-
 }
 
 
