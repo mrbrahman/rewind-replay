@@ -1,5 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import {EventEmitter} from 'events';
+
 import * as dateformat from 'dateformat';
 import {v4 as uuidv4} from 'uuid';
 import {exiftool} from 'exiftool-vendored';
@@ -8,7 +10,22 @@ import * as collections from './collections.mjs';
 import * as m from './metadata.mjs';
 import * as thumbs from './extract-thumbnails-faces.mjs';
 
-import * as db from '../database/indexer-db.mjs'
+import { ParallelProcesses as pp } from '../utils/parallel-processes.mjs';
+import {config} from '../config.mjs';
+import * as db from '../database/indexer-db.mjs';
+
+class EmitterClass extends EventEmitter {};
+export const indexerEvents = new EmitterClass();
+
+export let indexerQueue = pp()
+  .maxConcurrency(config.maxIndexPP||1)
+  .emitter(indexerEvents)
+;
+
+// indexerEvents.on('start', (_)=>{console.log(`starting ${_}`)});
+// indexerEvents.on('end', (_)=>{console.log(`finished ${_}`)});
+// indexerEvents.on('error', (_)=>{console.log(`error ${_}`)});
+// indexerEvents.on('all_done', (_)=>{console.log(`completed batch`)});
 
 function lsRecursive(dir){
   let ls = fs.readdirSync(dir, { withFileTypes: true });
@@ -26,13 +43,12 @@ export async function indexCollectionFirstTime(collection_id){
   let files = lsRecursive(c.collection_path);
   let indexStart = performance.now(), indexResult = [];
 
-  for(let f of files){
-    await indexFile(c, f, true);
-  }
-  
-  // TODO: place this properly
-  exiftool.end();
-  console.log(`Total time taken ${(performance.now()-indexStart)/1000} secs`)
+  indexerQueue.enqueueMany(
+    files.map(f=>{
+      return ()=>indexFile(c, f, true)
+    })
+  );
+
 }
 
 
@@ -87,6 +103,11 @@ function placeFileInCollection(collection, filename, file_date, inPlace=false){
   }
 }
 
+// TODO: To be used by chokidar
+export function addToIndexQueue(collection, sourceFileName, inPlace){
+  indexerQueue.enqueue(()=>indexFile(collection, sourceFileName, inPlace))
+}
+
 export async function indexFile(collection, sourceFileName, inPlace){
   // indexing is a series of steps, where the latter steps
   // are dependent on former steps
@@ -114,5 +135,5 @@ export async function indexFile(collection, sourceFileName, inPlace){
   db.dbMetadata.add(p);
 
   console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
-  // return p;   TODO: verify before remove the statement
+  // return p;   TODO: verify before removing this return statement
 }
