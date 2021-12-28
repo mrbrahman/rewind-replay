@@ -1,5 +1,9 @@
+
+import {EventEmitter} from 'events';
+
+
 export function ProcessDataInChunks(){
-  var arr=[], maxItemsBeforeScoop=100, maxWaitTimeBeforeScoopMS=5000, timer, invokeFunction;
+  var arr=[], maxItemsBeforeScoop=100, maxWaitTimeBeforeScoopMS=5000, timer, invokeFunction, emitter;
   function my(){
 
   }
@@ -27,7 +31,11 @@ export function ProcessDataInChunks(){
     // don't care about return value of promise
     // promise is used only for async / non-blocking work
     invokeFunction(scoop)
-      .then(console.log('HERE! invokeFunction done')); // TODO: emit return value?
+      .then(returnValue=>{
+        if(emitter){
+          emitter.emit('ran', returnValue)
+        }
+      });
     ;
   }
 
@@ -35,6 +43,11 @@ export function ProcessDataInChunks(){
     if(arr.length >= maxItemsBeforeScoop){
       doTask()
     }
+  }
+
+  // provide an ability to run immediately, for e.g. cleanup during shutdown
+  my.runNow = function(){
+    doTask()
   }
 
   my.stats = function(){
@@ -54,6 +67,19 @@ export function ProcessDataInChunks(){
   // also fn() needs to be an async function / return a promise
   my.invokeFunction = function(_){
     return arguments.length ? (invokeFunction = _, my): invokeFunction;
+  }
+
+  my.emitter = function(_){
+    if(arguments.length){
+      if(!_ instanceof EventEmitter){
+        throw 'Emitter parameter is not an instance of EventEmitter class!'
+      } else {
+        emitter = _;
+      }
+      return my;
+    } else {
+      return emitter ? true : false;
+    }
   }
 
   return my;
