@@ -6,11 +6,13 @@
 
   Note: Promises are used to enable concurrent runs. However, at the end of
   promise completion, a promise is NOT returned (unlike the conventional way).
-  TODO: Instead the result is emitted as a event.
+ 
 */
 
+import {EventEmitter} from 'events';
+
 export function ParallelProcesses(){
-  var maxConcurrency=1, processInInsertOrder=false, autoStart=true;
+  var maxConcurrency=1, processInInsertOrder=false, autoStart=true, emitter;
   let queue=[], processingCnt=0, pendingCnt=0, completedCnt=0, failedCnt=0, paused=false;
   
   function my(){
@@ -29,7 +31,7 @@ export function ParallelProcesses(){
   }
 
   my.enqueueMany = function(promiseGenerators){
-    noOfEntries = promiseGenerators.length;
+    let noOfEntries = promiseGenerators.length;
     queue.push(...promiseGenerators);
     // TODO: check/read-up performance of spread above vs. 
     //    Array.prototype.push.apply(queue, promiseGenerators);
@@ -45,19 +47,29 @@ export function ParallelProcesses(){
     if (!paused && processingCnt<maxConcurrency && queue.length>0){
       processingCnt++; pendingCnt--;
       let item = processInInsertOrder ? queue.shift() : queue.pop();
-      
+      if(emitter){
+        emitter.emit('start', item.toString()) // TODO: can we emit anything better?
+      }
+        
       item()
         .then(returnValue=>{
           processingCnt--; completedCnt++;
-          // emit success
-          // emit return value?
-          console.log(returnValue)
+          if(emitter){
+            emitter.emit('end', item.toString(), returnValue) // TODO: can we log anything better?
+          }
         })
         .catch(error=>{
           processingCnt--; failedCnt++;
-          // emit failed
+          if(emitter){
+            emitter.emit('error', item.toString(), error); // TODO: can we log anything better?
+          }
         })
-        .finally(()=>dequeue())
+        .finally(()=>{
+          if(pendingCnt==0 && emitter){
+            emitter.emit('all_done')
+          }
+          dequeue()
+        })
     }
   }
 
@@ -85,6 +97,19 @@ export function ParallelProcesses(){
 
   my.autoStart = function(_){
     return arguments.length ? (autoStart = _, my): autoStart;
+  }
+
+  my.emitter = function(_){
+    if(arguments.length){
+      if(!_ instanceof EventEmitter){
+        throw 'Emitter parameter is not an instance of EventEmitter class!'
+      } else {
+        emitter = _;
+      }
+      return my;
+    } else {
+      return emitter ? true : false;
+    }
   }
 
   my.stats = function(){
