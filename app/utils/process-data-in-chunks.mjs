@@ -41,8 +41,7 @@ export function ProcessDataInChunks(){
   const doTask = function(){
     clearTimeout(timer);
     let scoop = arr.splice(0, arr.length);
-    // don't care about return value of promise
-    // promise is used only for async / non-blocking work
+    
     invokeFunction(scoop)
       .then(returnValue=>{
         if(emitter){
