@@ -29,10 +29,10 @@ Rewind-Replay is ... ?
 
 ## Supporting
 - Sqlite3 provided FTS5 for searches
-- github "like" search syntax using search-query-parser
-- exiftool for metadata read / write
 - sharp for image operations
 - fluent-ffmpeg for video operations
+- exiftool-vendored for metadata read / write
+- github "like" search syntax using search-query-parser
 - Use browser native features (HTML5) to play videos
 
 
