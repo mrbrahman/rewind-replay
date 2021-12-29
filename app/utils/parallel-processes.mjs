@@ -6,8 +6,12 @@
 
   Note: Promises are used to enable concurrent runs. However, at the end of
   promise completion, a promise is NOT returned (unlike the conventional way).
+
+  Ideas borrowed from: https://medium.com/@karenmarkosyan/how-to-manage-promises-into-dynamic-queue-with-vanilla-javascript-9d0d1f8d4df5
  
 */
+
+// TODO: Should this return a promise?
 
 import {EventEmitter} from 'events';
 
