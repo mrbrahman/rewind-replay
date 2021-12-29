@@ -54,7 +54,7 @@ const metadataStmt = db.prepare(insertIntoMetadataStatement);
 const objectDetailsStmt = db.prepare(insertIntoObjectDetailsStatement)
 
 function transformMetadataToDb(row){
-  ['faces','objects'].forEach(c=>{
+  ['faces','objects','keywords'].forEach(c=>{
     row[c] = JSON.stringify(row[c])
   });
   return row;
