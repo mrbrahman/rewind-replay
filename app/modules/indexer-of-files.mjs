@@ -7,8 +7,8 @@ import {v4 as uuidv4} from 'uuid';
 import {exiftool} from 'exiftool-vendored';
 
 import * as collections from './collections.mjs';
-import * as m from './metadata.mjs';
-import * as thumbs from './extract-thumbnails-faces.mjs';
+import * as m from '../helpers/metadata.mjs';
+import * as thumbs from '../helpers/extract-thumbnails-faces.mjs';
 
 import { ParallelProcesses as pp } from '../utils/parallel-processes.mjs';
 import {config} from '../config.mjs';
@@ -75,6 +75,7 @@ function placeFileInCollection(collection, filename, file_date, inPlace=false){
     // based on pattern specified in collection.
     // For VIRTUAL_ALBUM, files will sit in collection_path, i.e. there
     // is no sub-folder
+    // TODO: For VIRTUAL_ALBUM, does it make sense to move to similar path like thumbnails?
 
     let subFolder = collection.album_type=='FOLDER_ALBUM' ? 
       dateformat(file_date, collection.apply_folder_pattern) : '';
