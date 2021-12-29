@@ -51,7 +51,7 @@ export function ProcessDataInChunks(){
     ;
   }
 
-  process = function(){
+  let process = function(){
     if(arr.length >= maxItemsBeforeScoop){
       doTask()
     }
