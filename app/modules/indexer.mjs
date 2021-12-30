@@ -7,8 +7,8 @@ import {v4 as uuidv4} from 'uuid';
 import {exiftool} from 'exiftool-vendored';
 
 import * as collections from './collections.mjs';
-import * as m from '../helpers/metadata.mjs';
-import * as thumbs from '../helpers/extract-thumbnails-faces.mjs';
+import * as m from './helpers/metadata.mjs';
+import * as thumbs from './helpers/extract-thumbnails-faces.mjs';
 
 import { ParallelProcesses as pp } from '../utils/parallel-processes.mjs';
 import {config} from '../config.mjs';
