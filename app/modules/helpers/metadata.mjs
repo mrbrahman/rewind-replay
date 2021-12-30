@@ -1,5 +1,6 @@
+import {exiftool} from 'exiftool-vendored';
 
-export async function getMetadata(exiftool, file){
+export async function getMetadata(file){
   let tags = await exiftool.read(file);
 
   let fileType = (tags["MIMEType"]||"x").split("/")[0],

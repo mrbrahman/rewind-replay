@@ -4,7 +4,6 @@ import {EventEmitter} from 'events';
 
 import dateformat from 'dateformat';
 import {v4 as uuidv4} from 'uuid';
-import {exiftool} from 'exiftool-vendored';
 
 import * as collections from './collections.mjs';
 import * as m from './helpers/metadata.mjs';
@@ -118,7 +117,7 @@ export async function indexFile(collection, sourceFileName, inPlace){
   let fileStart = performance.now();
   
   // Step 1: Read metadata from file
-  var p = await m.getMetadata(exiftool, sourceFileName);
+  var p = await m.getMetadata(sourceFileName);
 
   // Step 2: Use the metadata to move the file to collection
   let f = placeFileInCollection(collection, sourceFileName, p.file_date, inPlace);

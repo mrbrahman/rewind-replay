@@ -14,7 +14,7 @@ process.on('exit', ()=>{
 
 var c = { 
   "collection_name": "Test", 
-  "collection_path": "/home/shreyas/Projects/images-for-test/",
+  "collection_path": "/home/shreyas/Projects/test-collection/",
   "album_type": "FOLDER_ALBUM",
   "listen_paths": ["/home/shreyas/Downloads/"],
   "apply_folder_pattern": "yyyy/yyyy-mm-dd",
