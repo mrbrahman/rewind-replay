@@ -35,8 +35,14 @@ Rewind-Replay is ... ?
 - github "like" search syntax using search-query-parser
 - Use browser native features (HTML5) to play videos
 
+## Softwares needed pre-installed
+- SQLite3 (for better-sqlite3)
+- ffmpeg (for fluent-ffmpeg)
+- g++ (for tensorflow.js)
 
-## TODO
+Run `sudo apt install sqlite3 g++ ffmpeg` on Linux OS.
+
+# TODO
 
 - Image similarity
 
