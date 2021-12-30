@@ -1,7 +1,6 @@
 import * as s from './app/services.mjs';
 
 import process from 'process';
-import {exiftool} from 'exiftool-vendored';
 
 function log(str){
   console.log(`${new Date()} ${str}`)
@@ -16,8 +15,7 @@ let e = s.indexer.indexerEvents;
 
 e.on('all_done', ()=>{
   log('completed indexing, cleaning up');
-  exiftool.end();
-  s.fileWatcherManagement.stopAllWatchers();
+  s.housekeeping.shutdownCleanup();
 });
 
 s.fileWatcherManagement.startWatchersForAllCollections();

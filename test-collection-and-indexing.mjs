@@ -1,7 +1,5 @@
 import * as s from './app/services.mjs';
-
 import process from 'process';
-import {exiftool} from 'exiftool-vendored';
 
 function log(str){
   console.log(`${new Date()} ${str}`)
@@ -16,7 +14,7 @@ var c = {
   "collection_name": "Test", 
   "collection_path": "/home/shreyas/Projects/test-collection/",
   "album_type": "FOLDER_ALBUM",
-  "listen_paths": ["/home/shreyas/Downloads/"],
+  "listen_paths": ["/home/shreyas/Projects/test-collection-new-files/"],
   "apply_folder_pattern": "yyyy/yyyy-mm-dd",
   "default_collection": 1 // true
 }
@@ -36,8 +34,8 @@ console.log(colls);
 
 let e = s.indexer.indexerEvents;
 e.on('all_done', ()=>{
-  log('completed indexing')
-  exiftool.end();
+  log('completed indexing, calling shutdown housekeeping')
+  s.housekeeping.shutdownCleanup();
 });
 
 s.indexer.indexCollectionFirstTime(id);
