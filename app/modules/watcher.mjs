@@ -2,7 +2,7 @@ import chokidar from 'chokidar';
 
 import {config} from '../config.mjs';
 import {getAllCollections} from './collections.mjs';
-import {addToIndexQueue} from './indexer-of-files.mjs';
+import {addToIndexQueue} from './indexer.mjs';
 
 export const fileWatcherManagement = watchers();
 
