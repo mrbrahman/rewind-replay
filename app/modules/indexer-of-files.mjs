@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {EventEmitter} from 'events';
 
-import * as dateformat from 'dateformat';
+import dateformat from 'dateformat';
 import {v4 as uuidv4} from 'uuid';
 import {exiftool} from 'exiftool-vendored';
 
@@ -26,6 +26,10 @@ export let indexerQueue = pp()
 // indexerEvents.on('end', (_)=>{console.log(`finished ${_}`)});
 // indexerEvents.on('error', (_)=>{console.log(`error ${_}`)});
 // indexerEvents.on('all_done', (_)=>{console.log(`completed batch`)});
+indexerEvents.on('error', (item, error)=>{
+  console.log(`IndexerEvents got error: ${item} ${error}`);
+  throw error;
+})
 
 function lsRecursive(dir){
   let ls = fs.readdirSync(dir, { withFileTypes: true });
@@ -86,14 +90,14 @@ function placeFileInCollection(collection, filename, file_date, inPlace=false){
     if(!fs.existsSync(newFolder)){
       fs.mkdirSync(newFolder, {recursive: true})
     }
-    fs.renameSync(f.filename, newFileName);
+    fs.renameSync(filename, newFileName);
 
     album = collection.album_type=='FOLDER_ALBUM' ? 
       // newly created sub folder becomes the album
       subFolder : 
       // album is just the date
       dateformat(file_date, 'yyyy-mm-dd');  // TODO: timezone?
-    filename = newFileName;
+      albumFilename = newFileName;
   }
 
   return {
