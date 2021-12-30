@@ -106,7 +106,6 @@ function placeFileInCollection(collection, filename, file_date, inPlace=false){
   }
 }
 
-// TODO: To be used by chokidar
 export function addToIndexQueue(collection, sourceFileName, inPlace){
   indexerQueue.enqueue(()=>indexFile(collection, sourceFileName, inPlace))
 }
