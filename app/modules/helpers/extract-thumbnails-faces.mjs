@@ -112,5 +112,5 @@ export async function createAndSaveThumbnails(imgObject){
 
   // TODO: extract and return image hash (to help identify dups)
 
-  console.log(`${imgObject.filename} generated ${sizes.length} thumbnails in ${performance.now()-start} ms`)
+  console.log(`${imgObject.filename} generated ${sizes.length} thumbnails, extracted ${faceExtractPromises.length} faces in ${performance.now()-start} ms`)
 }
