@@ -51,7 +51,7 @@ export async function createAndSaveThumbnails(imgObject){
     fs.mkdirSync(imageThumbsDir, {recursive: true})
   }
 
-  let resizePromises = sizes.map(s=>{
+  let thumbnailPromises = sizes.map(s=>{
     // return a promise
     sharp(buf)
       .rotate()  // rotate based on exif Orientation
@@ -108,7 +108,7 @@ export async function createAndSaveThumbnails(imgObject){
   }
   
   let start = performance.now();
-  await Promise.all([...resizePromises, ...faceExtractPromises]);
+  await Promise.all([...thumbnailPromises, ...faceExtractPromises]);
 
   // TODO: extract and return image hash (to help identify dups)
 
