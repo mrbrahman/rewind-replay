@@ -42,17 +42,17 @@ function watchers(){
         listen_path: collection.listen_paths, 
         watcher: w
       });
-      console.log(`watcher for ${collection.collection_id} ${collection.listen_paths} ${w.getWatched()} is now setup`)
+      console.log(`watcher for collection_id: ${collection.collection_id} listen_path: ${p} is now setup`)
     }
   }
 
   my.listAllWatchers = function(){
-    return allWatchers.map(x=>{x.collection_id, x.watcher.getWatched()});
+    return allWatchers;
   }
 
   my.stopAllWatchers = function(){
     allWatchers.map(async function(x){
-      console.log(`closing ${x.watcher.getWatched()}`);
+      console.log(`closing watcher for collection_id: ${x.collection_id} listen_path: ${x.listen_path}`);
       await x['watcher'].close();
       console.log('watcher closed');
     })
