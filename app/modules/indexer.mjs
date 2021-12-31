@@ -77,7 +77,7 @@ export async function indexFile(collection, sourceFileName, inPlace){
       let { W, H } = p.xmpregion.AppliedToDimensions;
       if (W != p.ImageWidth || H != p.ImageHeight) {
         // TODO: what should we do when RegionAppliedToDimensions don't match image height and width?
-        console.warn(`${imageFileName} has different region diemnsions! Actual ${imgObject.ImageWidth}x${imgObject.ImageWidth} vs ${W}x${H}`);
+        console.warn(`${imageFileName} has different region dimensions! Actual ${p.ImageWidth}x${p.ImageWidth} vs ${W}x${H}`);
       }
       await thumbs.faceRegionExtraction(p.uuid, buf, p.xmpregion, p.orientation);
     }
