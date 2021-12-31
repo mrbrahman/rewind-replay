@@ -43,7 +43,10 @@ export async function getMetadata(file){
     aspectratio: aspectRatio,
     make: tags.Make||null,
     model: tags.Model||null,
-    orientation: tags.Orientation||tags.Rotation||null, // TODO: update for videos after thubmanil extraction
+    orientation: 
+      fileType=='image' && typeof(tags.Orientation!=='undefined') ? // Orientation can be "0"
+        tags.Orientation : 
+        fileType=='video' && typeof(tags.Rotation!=='undefined') ? tags.Rotation : null, 
     gpsposition: tags.GPSPosition||null,
     duration: tags.MediaDuration||null,
     region_applied_to_dimension_w: tags.RegionInfo ? 
