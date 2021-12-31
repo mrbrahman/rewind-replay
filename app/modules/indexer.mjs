@@ -7,7 +7,7 @@ import {v4 as uuidv4} from 'uuid';
 
 import * as collections from './collections.mjs';
 import * as m from './helpers/metadata.mjs';
-import * as thumbs from './helpers/extract-thumbnails-faces.mjs';
+import * as thumbs from './helpers/extract-thumbnails-faces.mjs'; // TODO: give these a better name
 
 import { ParallelProcesses as pp } from '../utils/parallel-processes.mjs';
 import {config} from '../config.mjs';
@@ -30,26 +30,65 @@ indexerEvents.on('error', (item, error)=>{
   throw error;
 })
 
-function lsRecursive(dir){
-  let ls = fs.readdirSync(dir, { withFileTypes: true });
-  let files = ls.filter(x=>!x.isDirectory())
-    .map( x=>path.join(dir,x.name) );
-  
-  return files.concat(
-    ls.filter(x=>x.isDirectory())
-    .map(x=>lsRecursive(path.join(dir, x.name)))  // recursive call
-    .reduce((acc,curr)=>acc.concat(curr), []) )
+export function addToIndexQueue(collection, sourceFileName, inPlace){
+  indexerQueue.enqueue(()=>indexFile(collection, sourceFileName, inPlace))
 }
 
-export async function indexCollectionFirstTime(collection_id){
-  let c = collections.getCollection(collection_id);
-  let files = lsRecursive(c.collection_path);
+// TODO: should this function be exported? Is there a need for anyone 
+// to call this directly without going through the Queue?
+
+export async function indexFile(collection, sourceFileName, inPlace){
+  // indexing is a series of steps, where the latter steps
+  // are dependent on former steps
   
-  indexerQueue.enqueueMany(
-    files.map(f=>{
-      return ()=>indexFile(c, f, true)
-    })
-  );
+  console.log(`Indexing ${sourceFileName}`);
+  let fileStart = performance.now();
+  
+  // Step 1: Read metadata from file
+  var p = await m.getMetadata(sourceFileName);
+
+  // Step 2: Use the metadata to physically move the file into collection. Determine album
+  let f = placeFileInCollection(collection, sourceFileName, p.file_date, inPlace);
+
+  // Step 3: Generate uuid, and make metadata current
+  p = {...p, ...f, uuid: uuidv4(), collection_id: collection.collection_id}
+
+  // TODO; Step 4: Video thumbnail extraction
+  if(p.mediatype == "video" || p.mediatype == "image"){
+
+    let imageFileName = p.filename;
+    if(p.mediatype == "video"){
+      // TODO: generate thumbnail for video
+
+      // TODO: reassign imageFileName to the extracted video thumbnail here
+    }
+
+    // read image once
+    let buf = fs.readFileSync(imageFileName);
+    
+    // thumbnails generation
+    await thumbs.createAndSaveThumbnails(p.uuid, buf);
+
+    // face region extraction (if present)
+    if (p.xmpregion
+      && p.xmpregion.RegionList.filter(d => d.Type == 'Face').length > 0
+      && p.xmpregion.AppliedToDimensions.Unit == 'pixel') // TODO: don't know what to do with others just yet
+    {
+      let { W, H } = p.xmpregion.AppliedToDimensions;
+      if (W != p.ImageWidth || H != p.ImageHeight) {
+        // TODO: what should we do when RegionAppliedToDimensions don't match image height and width?
+        console.warn(`${imageFileName} has different region diemnsions! Actual ${imgObject.ImageWidth}x${imgObject.ImageWidth} vs ${W}x${H}`);
+      }
+      await thumbs.faceRegionExtraction(p.uuid, buf, p.xmpregion, p.orientation);
+    }
+
+  }
+
+  // Step 6: Make an entry in db
+  db.dbMetadata.add(p);
+
+  console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
+  // return p;   TODO: verify before removing this return statement
 }
 
 
@@ -105,36 +144,25 @@ function placeFileInCollection(collection, filename, file_date, inPlace=false){
   }
 }
 
-export function addToIndexQueue(collection, sourceFileName, inPlace){
-  indexerQueue.enqueue(()=>indexFile(collection, sourceFileName, inPlace))
+
+function lsRecursive(dir){
+  let ls = fs.readdirSync(dir, { withFileTypes: true });
+  let files = ls.filter(x=>!x.isDirectory())
+    .map( x=>path.join(dir,x.name) );
+  
+  return files.concat(
+    ls.filter(x=>x.isDirectory())
+    .map(x=>lsRecursive(path.join(dir, x.name)))  // recursive call
+    .reduce((acc,curr)=>acc.concat(curr), []) )
 }
 
-export async function indexFile(collection, sourceFileName, inPlace){
-  // indexing is a series of steps, where the latter steps
-  // are dependent on former steps
+export async function indexCollectionFirstTime(collection_id){
+  let c = collections.getCollection(collection_id);
+  let files = lsRecursive(c.collection_path);
   
-  console.log(`Indexing ${sourceFileName}`);
-  let fileStart = performance.now();
-  
-  // Step 1: Read metadata from file
-  var p = await m.getMetadata(sourceFileName);
-
-  // Step 2: Use the metadata to move the file to collection
-  let f = placeFileInCollection(collection, sourceFileName, p.file_date, inPlace);
-
-  // Step 3: Generate uuid, and make metadata current
-  p = {...p, ...f, uuid: uuidv4(), collection_id: collection.collection_id}
-  
-  // TODO; Step 4: Video thumbnail extraction
-
-  // Step 5: Generate thumbnails, extract faces ()
-  if(p.mediatype == "image"){
-    await thumbs.createAndSaveThumbnails(p)
-  }
-
-  // Step 6: Make an entry in db
-  db.dbMetadata.add(p);
-
-  console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
-  // return p;   TODO: verify before removing this return statement
+  indexerQueue.enqueueMany(
+    files.map(f=>{
+      return ()=>indexFile(c, f, true)
+    })
+  );
 }
