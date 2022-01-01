@@ -30,6 +30,10 @@ const facesDir = config.facesDir ||
     path.join('data', 'faces')
 ;
 
+// Not Samsung phones have issue, which needs {failOnError: true}
+// when reading the image / buffer with sharp
+// https://github.com/lovell/sharp/issues/1578
+
 export async function createAndSaveThumbnails(uuid, buf){
   // We don't want all thumbnails in one directory. Hence, create
   // sub-dirs based on the first 3 chars of the uuid.
@@ -49,7 +53,7 @@ export async function createAndSaveThumbnails(uuid, buf){
 
   let thumbnailPromises = sizes.map(s=>{
     // return a promise
-    sharp(buf)
+    sharp(buf, { failOnError: false })
       .rotate()  // rotate based on exif Orientation
       .resize(s)
       .toFile(path.join(
@@ -88,17 +92,22 @@ export async function faceRegionExtraction(uuid, buf, xmpregion, orientation) {
     console.log(`${uuid} extracting ${left} ${top} ${width} ${height} for ${face.Name}`);
 
     // add a promise
-    let facePromise = sharp(buf)
+    let facePromise = sharp(buf, { failOnError: false })
+      .withMetadata() // keep metadata to help with rotation after extract
       .extract({
         left: left,
         top: top,
         width: width,
         height: height
       })
-      // rotate the image. need to specify orientation, since we lost it during extract 
-      // .rotate(orientation)  // apparently no need to rotate! // FIXME: remove this after more testing with newer pics
-      // TODO: same face appearing multiple times in the image? for e.g a photo in a photo?
-      .toFile(path.join(faceDir, `${uuid}.jpg`))
+      .toBuffer()
+      .then((faceBuf)=>{
+        sharp(faceBuf)
+          // rotate the image, and lose the metadata
+          .rotate()
+          // TODO: same face appearing multiple times in the image? for e.g a photo in a photo?
+          .toFile(path.join(faceDir, `${uuid}.jpg`)) 
+      })
     ;
     
     faceExtractPromises.push(facePromise);
