@@ -43,7 +43,7 @@ function converToSQLQueryStr(searchStr){
   const aliases = {
     tags: 'keywords',
     people: 'faces',
-    camera: 'make',
+    camera: 'model',
     type: 'mediatype',
     on: 'file_date',
     l: 'logical'
