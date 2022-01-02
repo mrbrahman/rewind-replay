@@ -144,22 +144,19 @@ function placeFileInCollection(collection, filename, file_date, inPlace=false){
   }
 }
 
-
-function lsRecursive(dir){
-  let ls = fs.readdirSync(dir, { withFileTypes: true });
-  let files = ls.filter(x=>!x.isDirectory())
-    .map( x=>path.join(dir,x.name) );
-  
-  return files.concat(
-    ls.filter(x=>x.isDirectory())
-    .map(x=>lsRecursive(path.join(dir, x.name)))  // recursive call
-    .reduce((acc,curr)=>acc.concat(curr), []) )
-}
-
-export async function indexCollectionFirstTime(collection_id){
+export async function indexCollection(collection_id, firstTime=false){
   let c = collections.getCollection(collection_id);
-  let files = lsRecursive(c.collection_path);
-  
+  let files = [];
+
+  if(firstTime){
+    // save some time, and just get a list of all files
+    files = collections.listAllFilesForCollection(collection_id);
+  } else {
+    // painstakingly find out which files are added/updated/(removed also?)
+    files = collections.listUpdatedFilesForCollection(collection_id);
+  }
+
+  // add files to the indexer queue
   indexerQueue.enqueueMany(
     files.map(f=>{
       return ()=>indexFile(c, f, true)

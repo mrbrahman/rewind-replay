@@ -38,5 +38,5 @@ e.on('all_done', ()=>{
   s.housekeeping.shutdownCleanup();
 });
 
-s.indexer.indexCollectionFirstTime(id);
+s.indexer.indexCollection(id, true);
 log("started indexer");
