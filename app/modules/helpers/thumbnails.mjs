@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {default as sharp} from 'sharp';
+import {default as ffmpeg} from 'fluent-ffmpeg';
 
 import {config} from '../../config.mjs';
 
@@ -116,6 +117,34 @@ export async function extractFaceRegions(uuid, buf, xmpregion) {
   console.log(`faces: For ${uuid} generated ${faceExtractPromises.length} in ${performance.now()-start} ms`)
 }
 
-export function extratVideoThumbnail(filename){
+export async function extratVideoThumbnail(uuid, videoFilename){
+  // convert the callback into a Promise, so caller can "await"
+  return new Promise((resolve,reject)=>{
+    // use the same thumbnails dir to store vide thumbnail (screenshot) as well.
+    // in case of videos, we additionally store the full video screenshot,
+    // and extract image thumbnails from that video screenshot
+    let videoThumbsDir = path.join(
+      thumbsDir,
+      ...Array.from(uuid).slice(0,3)    // 3 levels deep
+    );
+    if (!fs.existsSync(videoThumbsDir)) {
+      fs.mkdirSync(videoThumbsDir, { recursive: true });
+    }
 
+    ffmpeg(videoFilename)
+      .on('error', (error)=>{
+        console.log(`FFMpeg error for ${videoFilename}: ${error}`)
+        reject(error)
+      })
+      .thumbnail({
+        count: 1,
+        folder: videoThumbsDir,
+        filename: `${uuid}.jpg`
+      })
+      .on("end", async function(){
+        // return with video screenshot filename
+        resolve(path.join(videoThumbsDir, `${uuid}.jpg`))
+      })
+    ;
+  })
 }
