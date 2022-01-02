@@ -79,7 +79,7 @@ export async function indexFile(collection, sourceFileName, inPlace){
         // TODO: what should we do when RegionAppliedToDimensions don't match image height and width?
         console.warn(`${imageFileName} has different region dimensions! Actual ${p.ImageWidth}x${p.ImageWidth} vs ${W}x${H}`);
       }
-      await thumbs.faceRegionExtraction(p.uuid, buf, p.xmpregion);
+      await thumbs.extractFaceRegions(p.uuid, buf, p.xmpregion);
     }
 
   }

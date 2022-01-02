@@ -70,7 +70,7 @@ export async function createAndSaveThumbnails(uuid, buf){
 }
 
 
-export async function faceRegionExtraction(uuid, buf, xmpregion) {
+export async function extractFaceRegions(uuid, buf, xmpregion) {
   let start = performance.now();
   
   let faceExtractPromises = [];
