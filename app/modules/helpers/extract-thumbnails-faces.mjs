@@ -70,8 +70,7 @@ export async function createAndSaveThumbnails(uuid, buf){
 }
 
 
-export async function faceRegionExtraction(uuid, buf, xmpregion, orientation) {
-  console.log(`uuid: ${uuid} orientation: ${orientation}`)
+export async function faceRegionExtraction(uuid, buf, xmpregion) {
   let start = performance.now();
   
   let faceExtractPromises = [];
