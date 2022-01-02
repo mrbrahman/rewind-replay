@@ -7,7 +7,7 @@ import {v4 as uuidv4} from 'uuid';
 
 import * as collections from './collections.mjs';
 import * as m from './helpers/metadata.mjs';
-import * as thumbs from './helpers/extract-thumbnails-faces.mjs'; // TODO: give these a better name
+import * as thumbs from './helpers/thumbnails.mjs'; // TODO: give these a better name
 
 import { ParallelProcesses as pp } from '../utils/parallel-processes.mjs';
 import {config} from '../config.mjs';
@@ -67,7 +67,7 @@ export async function indexFile(collection, sourceFileName, inPlace){
     let buf = fs.readFileSync(imageFileName);
     
     // thumbnails generation
-    await thumbs.createAndSaveThumbnails(p.uuid, buf);
+    await thumbs.createImageThumbnails(p.uuid, buf);
 
     // face region extraction (if present)
     if (p.xmpregion

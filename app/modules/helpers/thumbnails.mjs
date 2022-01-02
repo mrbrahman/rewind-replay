@@ -34,7 +34,7 @@ const facesDir = config.facesDir ||
 // when reading the image / buffer with sharp
 // https://github.com/lovell/sharp/issues/1578
 
-export async function createAndSaveThumbnails(uuid, buf){
+export async function createImageThumbnails(uuid, buf){
   // We don't want all thumbnails in one directory. Hence, create
   // sub-dirs based on the first 3 chars of the uuid.
   // If we have the uuid in the front end, we can directly go to the
@@ -114,4 +114,8 @@ export async function extractFaceRegions(uuid, buf, xmpregion) {
 
   await Promise.all(faceExtractPromises);
   console.log(`faces: For ${uuid} generated ${faceExtractPromises.length} in ${performance.now()-start} ms`)
+}
+
+export function extratVideoThumbnail(filename){
+
 }
