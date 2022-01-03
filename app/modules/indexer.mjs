@@ -13,13 +13,14 @@ import { ParallelProcesses as pp } from '../utils/parallel-processes.mjs';
 import {config} from '../config.mjs';
 import * as db from '../database/indexer-db.mjs';
 
+// to be used in case of emergencies like shutdown, etc.
 export let indexerDbFlush = ()=>db.indexerDbWriteInChunks.runNow();
 
 class EmitterClass extends EventEmitter {};
 export const indexerEvents = new EmitterClass();
 
 export let indexerQueue = pp()
-  .maxConcurrency(config.maxIndexPP||1)
+  .maxConcurrency(config.maxIndexerConcurrency||1)
   .emitter(indexerEvents)
 ;
 
