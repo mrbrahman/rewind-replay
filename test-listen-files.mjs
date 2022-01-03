@@ -1,4 +1,5 @@
 import * as s from './app/services.mjs';
+
 import process from 'process';
 
 function log(str){
@@ -11,9 +12,10 @@ process.on('exit', ()=>{
 });
 
 let e = s.indexer.indexerEvents;
+
 e.on('all_done', ()=>{
-  log('completed indexing, calling shutdown housekeeping')
+  log('completed indexing, cleaning up');
   s.housekeeping.shutdownCleanup();
 });
 
-s.indexer.indexCollection(1, false);
+s.fileWatcherManagement.startWatchersForAllCollections();

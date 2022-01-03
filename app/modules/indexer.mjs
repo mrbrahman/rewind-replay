@@ -53,7 +53,7 @@ export async function indexFile(collection, sourceFileName, inPlace){
   // Step 3: Generate uuid, and make metadata current
   p = {...p, ...f, uuid: uuidv4(), collection_id: collection.collection_id}
 
-  // TODO; Step 4: Video thumbnail extraction
+  // Step 4: Video thumbnail extraction
   if(p.mediatype == "video" || p.mediatype == "image"){
 
     let imageFileName = p.filename;
@@ -91,6 +91,9 @@ export async function indexFile(collection, sourceFileName, inPlace){
   // return p;   TODO: verify before removing this return statement
 }
 
+export async function reIndexFile(collection, sourceFileName, uuid){
+  // TODO
+}
 
 function placeFileInCollection(collection, filename, file_date, inPlace=false){
   let album, albumFilename,
@@ -150,16 +153,101 @@ export async function indexCollection(collection_id, firstTime=false){
 
   if(firstTime){
     // save some time, and just get a list of all files
-    files = collections.listAllFilesForCollection(collection_id);
+    files = {added: listAllFilesForCollection(c)};
   } else {
-    // painstakingly find out which files are added/updated/(removed also?)
-    files = collections.listUpdatedFilesForCollection(collection_id);
+    // painstakingly find out which files are added/updated/removed
+    files = await listUpdatedFilesForCollection(c);
   }
 
   // add files to the indexer queue
   indexerQueue.enqueueMany(
-    files.map(f=>{
+    files['added'].map(f=>{
       return ()=>indexFile(c, f, true)
     })
   );
+
+  indexerQueue.enqueueMany(
+    files['changed'].map(f=>{
+      return ()=>reIndexFile(c, f.filename, f.uuid);
+    })
+  );
+
+  // TODO: handle deleted files
+}
+
+function lsRecursive(dir){
+  let ls = fs.readdirSync(dir, { withFileTypes: true });
+  let files = ls.filter(x=>!x.isDirectory())
+    .map( x=>path.join(dir,x.name) );
+  
+  return files.concat(
+    ls.filter(x=>x.isDirectory())
+    .map(x=>lsRecursive(path.join(dir, x.name)))  // recursive call
+    .reduce((acc,curr)=>acc.concat(curr), []) )
+}
+
+export function listAllFilesForCollection(collection){
+  let files = lsRecursive(collection.collection_path);
+
+  return files;
+}
+
+export async function getFilesMtime(dir){
+  let files = lsRecursive(dir);
+  
+  let result = files.map(f=>{
+    return {
+      filename: f,
+      file_modify_date: Math.floor(fs.statSync(f).mtimeMs / 1000) // Unix Epoch
+    }
+  });
+
+  // convert output into hash map (Javascript Object)
+  // {<filename_1>: {mtime: <file_modify_date_1>}, ... <filename_n>: {mtime: <file_modify_date_n>}}
+  return result.reduce(function(acc,curr){
+    acc[curr.filename]={mtime: curr.file_modify_date}; 
+    return acc;
+  }, {})
+}
+
+export async function listUpdatedFilesForCollection(collection){
+
+  // Step 1: list all files and their modify times for collection
+  let p1 = getFilesMtime(collection.collection_path);
+
+  // Step 2: Get files and modify times from db
+  let p2 = db.getIndexedFilesModifyTime(collection.collection_id);
+
+  // Step 3: Wait for promises to complete
+  let [physicalFiles, databaseEntries] = await Promise.all([p1, p2]);
+
+  console.log(`physicalFiles ${Object.keys(physicalFiles).length} databaseEntries: ${Object.keys(databaseEntries).length}`)
+
+  // Step 4: compare the two and determine which have been added/removed/modified
+  let added=[], changed=[], deleted=[];
+
+  Object.keys(physicalFiles).forEach(f=>{
+    if(!(f in databaseEntries)){
+      added.push(f);
+    } else if (physicalFiles[f].mtime > databaseEntries[f].mtime){
+      changed.push({uuid: databaseEntries[f].uuid, filename: f });
+    }
+  });
+
+  Object.keys(databaseEntries).forEach(f=>{
+    if(!(f in physicalFiles)){
+      deleted.push({uuid: databaseEntries[f].uuid, filename: f });
+    }
+  })
+
+  return {added, changed, deleted};
+}
+
+function removeDeletedFilesFromCollection(collection_id, files){
+  /*   
+    get uuid of all files; for each file:
+      remove thumbnails
+      remove faces?
+      remove db entries 
+  */
 }
