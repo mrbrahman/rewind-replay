@@ -8,7 +8,8 @@ Rewind-Replay is ... ?
 2. Some of us really care about our media in folders that we have meticulously curated from a long time. With any tool, we want the ability to continue to manage pics in folders.
 3. The single source of truth is the photo itself. We want all metadata, including user tags, ML based face / objects labels etc., to go back to the photo, to the extent possible.
 4. In the same vein, we also want the tool to utlize the metadata already existing in the photos.
-5. Some kind of sensible, not too constrained search is needed, even though it may (will) not be as good as Google.
+5. In other words, we don't want to be locked-down by any one particular tool.
+6. Some kind of sensible, not too constrained search is needed, even though it may (will) not be as good as Google.
 
 
 # Key Terms
