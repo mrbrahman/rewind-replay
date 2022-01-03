@@ -23,21 +23,18 @@ export let indexerQueue = pp()
 
 // indexerEvents.on('start', (_)=>{console.log(`starting ${_}`)});
 // indexerEvents.on('end', (_)=>{console.log(`finished ${_}`)});
-// indexerEvents.on('error', (_)=>{console.log(`error ${_}`)});
 // indexerEvents.on('all_done', (_)=>{console.log(`completed batch`)});
+
 indexerEvents.on('error', (item, error)=>{
   console.log(`IndexerEvents got error: ${item} ${error}`);
   throw error;
 })
 
-export function addToIndexQueue(collection, sourceFileName, inPlace){
-  indexerQueue.enqueue(()=>indexFile(collection, sourceFileName, inPlace))
+export function addToIndexQueue(_){
+  indexerQueue.enqueue(()=>indexFile(_))
 }
 
-// TODO: should this function be exported? Is there a need for anyone 
-// to call this directly without going through the Queue?
-
-export async function indexFile(collection, sourceFileName, inPlace){
+async function indexFile(collection, sourceFileName, uuid, inPlace){
   // indexing is a series of steps, where the latter steps
   // are dependent on former steps
   
@@ -51,7 +48,7 @@ export async function indexFile(collection, sourceFileName, inPlace){
   let f = fileOps.placeFileInCollection(collection, sourceFileName, p.file_date, inPlace);
 
   // Step 3: Generate uuid, and make metadata current
-  p = {...p, ...f, uuid: uuidv4(), collection_id: collection.collection_id}
+  p = {...p, ...f, uuid: uuid ? uuid : uuidv4(), collection_id: collection.collection_id}
 
   // Step 4: Video thumbnail extraction
   if(p.mediatype == "video" || p.mediatype == "image"){
@@ -88,11 +85,6 @@ export async function indexFile(collection, sourceFileName, inPlace){
   db.dbMetadata.add(p);
 
   console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
-  // return p;   TODO: verify before removing this return statement
-}
-
-export async function reIndexFile(collection, sourceFileName, uuid){
-  // TODO
 }
 
 export async function indexCollection(collection_id, firstTime=false){
@@ -110,13 +102,13 @@ export async function indexCollection(collection_id, firstTime=false){
   // add files to the indexer queue
   indexerQueue.enqueueMany(
     files['added'].map(f=>{
-      return ()=>indexFile(c, f, true)
+      return ()=>indexFile(c, f, null, true)
     })
   );
 
   indexerQueue.enqueueMany(
     files['changed'].map(f=>{
-      return ()=>reIndexFile(c, f.filename, f.uuid);
+      return ()=>indexFile(c, f.filename, f.uuid, true);
     })
   );
 

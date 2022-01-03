@@ -34,7 +34,7 @@ function watchers(){
       let w = chokidar.watch(p) // TODO: ignore patterns
         .on('add', file=>{
           console.log(`watcher: ${file} is added`);
-          addToIndexQueue(collection, file, false);
+          addToIndexQueue(collection, file, null, false);
         });
       
       allWatchers.push({

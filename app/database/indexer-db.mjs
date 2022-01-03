@@ -9,7 +9,12 @@ export const dbEvents = new EmitterClass();
 
 dbEvents.on('ran', (_)=>{
   console.log(`DB Update ran. ${_} entries`)
-})
+});
+
+const deleteFromMetadataStatement = `
+delete from metadata
+where uuid = ?
+`;
 
 const insertIntoMetadataStatement = `
 insert into metadata
@@ -32,6 +37,11 @@ values
 )
 `;
 
+const deleteFromObjectDetailsStatement = `
+delete from object_details
+where uuid = ?
+`;
+
 const insertIntoObjectDetailsStatement = `
 insert into object_details
 (
@@ -50,8 +60,10 @@ values
   @region_area_unit
 )
 `;
-const metadataStmt = db.prepare(insertIntoMetadataStatement);
-const objectDetailsStmt = db.prepare(insertIntoObjectDetailsStatement)
+const deleteMetadata = db.prepare(deleteFromMetadataStatement);
+const insertMetadata = db.prepare(insertIntoMetadataStatement);
+const deleteObjectDetails = db.prepare(deleteFromObjectDetailsStatement);
+const insertObjectDetails = db.prepare(insertIntoObjectDetailsStatement);
 
 function transformMetadataToDb(row){
   ['faces','objects','keywords'].forEach(c=>{
@@ -68,7 +80,8 @@ async function createNewMetadataBulk(entries){
       let objectMetadata = [];
 
       for (let entry of records) {
-        metadataStmt.run( transformMetadataToDb(entry) );
+        deleteMetadata.run(entry.uuid);
+        insertMetadata.run( transformMetadataToDb(entry) );
         
         if(entry.xmpregion){
           // TODO: create transformObjectDetailsToDb? what about uuid?
@@ -88,7 +101,8 @@ async function createNewMetadataBulk(entries){
       }
 
       for (let entry of objectMetadata){
-        objectDetailsStmt.run(entry)
+        deleteObjectDetails.run(entry.uuid);
+        insertObjectDetails.run(entry)
       }
     }
   );
