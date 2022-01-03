@@ -3,8 +3,7 @@ import {exiftool} from 'exiftool-vendored';
 import {fileWatcherManagement} from './watcher.mjs';
 
 export function shutdownCleanup(){
-  // TODO: commit any pending changes
-  indexerDbFlush();
+  indexerDbFlush();  // commit any pending indexing changes
   exiftool.end();
   fileWatcherManagement.stopAllWatchers();
 }
