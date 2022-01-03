@@ -13,7 +13,8 @@ function lsRecursive(dir) {
   return files.concat(
     ls.filter(x => x.isDirectory())
       .map(x => lsRecursive(path.join(dir, x.name))) // recursive call
-      .reduce((acc, curr) => acc.concat(curr), []));
+      .reduce((acc, curr) => acc.concat(curr), [])
+  );
 }
 
 export function listAllFilesForCollection(collection) {
