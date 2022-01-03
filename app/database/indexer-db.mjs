@@ -113,7 +113,7 @@ async function createNewMetadataBulk(entries){
 }
 
 // expose a function to perform db activities in "chunks"
-export const dbMetadata = chunks()
+export const indexerDbWriteInChunks = chunks()
   .maxWaitTimeBeforeScoopMS(config.dbUpdateTimeout||3000)
   .maxItemsBeforeScoop(config.dbUpdateChunk||500)
   .emitter(dbEvents)

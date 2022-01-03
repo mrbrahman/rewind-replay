@@ -13,6 +13,8 @@ import { ParallelProcesses as pp } from '../utils/parallel-processes.mjs';
 import {config} from '../config.mjs';
 import * as db from '../database/indexer-db.mjs';
 
+export let indexerDbFlush = ()=>db.indexerDbWriteInChunks.runNow();
+
 class EmitterClass extends EventEmitter {};
 export const indexerEvents = new EmitterClass();
 
@@ -82,7 +84,7 @@ async function indexFile(collection, sourceFileName, uuid, inPlace){
   }
 
   // Step 6: Make an entry in db
-  db.dbMetadata.add(p);
+  db.indexerDbWriteInChunks.add(p);
 
   console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
 }
