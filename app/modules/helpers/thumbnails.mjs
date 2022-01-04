@@ -148,3 +148,32 @@ export async function extratVideoThumbnail(uuid, videoFilename){
     ;
   })
 }
+
+export function deleteImageThumbnails(uuid){
+  let dir = path.join(
+    thumbsDir,
+    ...Array.from(uuid).slice(0,3)
+  );
+
+  if(fs.existsSync(dir)){
+    fs.readdirSync(dir)
+      .filter(f=>f.startsWith(uuid))
+      .forEach(f=>fs.unlinkSync(path.join(dir,f)))
+    ;
+  }
+}
+
+export function deleteFaceThumbnails(uuid){
+  let dir = path.join(
+    facesDir,
+    ...Array.from(uuid).slice(0,3)
+  );
+
+  if(fs.existsSync(dir)){
+    fs.readdirSync(dir)
+      .filter(f=>f.startsWith(uuid))
+      .forEach(f=>fs.unlinkSync(path.join(dir,f)))
+    ;
+  }
+}
+

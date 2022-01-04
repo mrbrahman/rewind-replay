@@ -33,8 +33,8 @@ indexerEvents.on('error', (item, error)=>{
   throw error;
 })
 
-export function addToIndexQueue(_){
-  indexerQueue.enqueue(()=>indexFile(_))
+export function addToIndexQueue(collection, filename, uuid, inPlace){
+  indexerQueue.enqueue(()=>indexFile(collection, filename, uuid, inPlace))
 }
 
 async function indexFile(collection, sourceFileName, uuid, inPlace){
@@ -59,7 +59,7 @@ async function indexFile(collection, sourceFileName, uuid, inPlace){
     let imageFileName = p.filename;
     if(p.mediatype == "video"){
       // extract video thumbnail (screenshot) and use that image to extract image thumbs
-      imageFileName = await thumbs.extratVideoThumbnail(p.uuid, sourceFileName);
+      imageFileName = await thumbs.extratVideoThumbnail(p.uuid, p.filename);
       // TODO: need to overlay "play" button on video thumbnails
     }
 
@@ -85,9 +85,23 @@ async function indexFile(collection, sourceFileName, uuid, inPlace){
   }
 
   // Step 6: Make an entry in db
-  db.indexerDbWriteInChunks.add(p);
+  db.indexerDbWriteInChunks.add( {action: 'del-insert', data: p} );
 
   console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
+}
+
+export async function deleteFromCollection(uuid){
+  let start = performance.now();
+  console.log(`DELETE: start to delete for uuid: ${uuid}`);
+
+  // cleanup thumbnails
+  thumbs.deleteImageThumbnails(uuid);
+  // delete faces
+  thumbs.deleteFaceThumbnails(uuid);
+  // remove from db
+  db.indexerDbWriteInChunks.add( {action: 'delete', data: {uuid: uuid}} );
+  
+  console.log(`Completed DELETE for ${uuid} in ${performance.now()-start} ms`)
 }
 
 export async function indexCollection(collection_id, firstTime=false){
@@ -115,14 +129,10 @@ export async function indexCollection(collection_id, firstTime=false){
     })
   );
 
-  // TODO: handle deleted files
+  indexerQueue.enqueueMany(
+    files['deleted'].map(f=>{
+      return ()=>deleteFromCollection(f.uuid);
+    })
+  );
 }
 
-function removeDeletedFilesFromCollection(collection_id, files){
-  /*   
-    get uuid of all files; for each file:
-      remove thumbnails
-      remove faces?
-      remove db entries 
-  */
-}

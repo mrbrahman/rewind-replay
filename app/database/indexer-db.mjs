@@ -13,7 +13,7 @@ dbEvents.on('ran', (_)=>{
 
 const deleteFromMetadataStatement = `
 delete from metadata
-where uuid = ?
+where uuid = @uuid
 `;
 
 const insertIntoMetadataStatement = `
@@ -39,7 +39,7 @@ values
 
 const deleteFromObjectDetailsStatement = `
 delete from object_details
-where uuid = ?
+where uuid = @uuid
 `;
 
 const insertIntoObjectDetailsStatement = `
@@ -65,47 +65,48 @@ const insertMetadata = db.prepare(insertIntoMetadataStatement);
 const deleteObjectDetails = db.prepare(deleteFromObjectDetailsStatement);
 const insertObjectDetails = db.prepare(insertIntoObjectDetailsStatement);
 
-function transformMetadataToDb(row){
+function transformDataToMetadataRow(row){
   ['faces','objects','keywords'].forEach(c=>{
     row[c] = JSON.stringify(row[c])
   });
   return row;
 }
 
-async function createNewMetadataBulk(entries){
+async function indexerDbTask(entries){
   let start = performance.now();
 
   let insertMany = db.transaction(
-    function(records){
-      let objectMetadata = [];
+    function(tasks){
+      for (let task of tasks) {
+        if(task.action == 'delete'){
+          deleteObjectDetails.run(task.data);
+          deleteMetadata.run(task.data);
+        } else if (task.action == 'del-insert'){
+          // first clean-up any old entries
+          deleteObjectDetails.run(task.data);
+          deleteMetadata.run(task.data);
+          
+          insertMetadata.run( transformDataToMetadataRow(task.data) );
 
-      for (let entry of records) {
-        deleteMetadata.run(entry.uuid);
-        insertMetadata.run( transformMetadataToDb(entry) );
-        
-        if(entry.xmpregion){
-          // TODO: create transformObjectDetailsToDb? what about uuid?
-          entry.xmpregion.RegionList.forEach(o=>objectMetadata.push({
-            uuid: entry.uuid,
-            frame: '',                    // TODO: future use. may be this will help for video files?
-            how_found: entry.software,    // software that found this
-            region_name: o.Name,
-            region_type: o.Type,
-            region_area_x: o.Area.X,
-            region_area_y: o.Area.Y,
-            region_area_w: o.Area.W,
-            region_area_h: o.Area.H,
-            region_area_unit: o.Area.Unit
-          }));
+          if(task.data.xmpregion){
+            // TODO: create transformObjectDetailsToDb? what about uuid?
+            task.data.xmpregion.RegionList.forEach(o=>insertObjectDetails.run({
+              uuid: task.data.uuid,
+              frame: '',                    // TODO: future use. may be this will help for video files?
+              how_found: task.data.software,    // software that found this
+              region_name: o.Name,
+              region_type: o.Type,
+              region_area_x: o.Area.X,
+              region_area_y: o.Area.Y,
+              region_area_w: o.Area.W,
+              region_area_h: o.Area.H,
+              region_area_unit: o.Area.Unit
+            }));
+          } // xmp
         }
-      }
-
-      for (let entry of objectMetadata){
-        deleteObjectDetails.run(entry.uuid);
-        insertObjectDetails.run(entry)
-      }
-    }
-  );
+      } // for loop
+    } // end of function
+  ); // db.transaction
 
   insertMany(entries);
   console.log(`DB update: Completed ${entries.length} entries in ${performance.now()-start} ms`)
@@ -117,7 +118,7 @@ export const indexerDbWriteInChunks = chunks()
   .maxWaitTimeBeforeScoopMS(config.dbUpdateTimeout||3000)
   .maxItemsBeforeScoop(config.dbUpdateChunk||500)
   .emitter(dbEvents)
-  .invokeFunction( (_)=>createNewMetadataBulk(_) )
+  .invokeFunction( (_)=>indexerDbTask(_) )
 ;
 
 // async function, so it can be run in background
