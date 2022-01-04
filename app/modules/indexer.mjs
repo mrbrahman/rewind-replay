@@ -19,7 +19,7 @@ export let indexerDbFlush = ()=>db.indexerDbWriteInChunks.runNow();
 class EmitterClass extends EventEmitter {};
 export const indexerEvents = new EmitterClass();
 
-export let indexerQueue = pp()
+let indexerQueue = pp()
   .maxConcurrency(config.maxIndexerConcurrency||1)
   .emitter(indexerEvents)
 ;
@@ -59,7 +59,7 @@ async function indexFile(collection, sourceFileName, uuid, inPlace){
     let imageFileName = p.filename;
     if(p.mediatype == "video"){
       // extract video thumbnail (screenshot) and use that image to extract image thumbs
-      imageFileName = await thumbs.extratVideoThumbnail(p.uuid, p.filename);
+      imageFileName = await thumbs.generateVideoThumbnail(p.uuid, p.filename);
       // TODO: need to overlay "play" button on video thumbnails
     }
 
@@ -90,7 +90,7 @@ async function indexFile(collection, sourceFileName, uuid, inPlace){
   console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
 }
 
-export async function deleteFromCollection(uuid){
+async function deleteFromCollection(uuid){
   let start = performance.now();
   console.log(`DELETE: start to delete for uuid: ${uuid}`);
 

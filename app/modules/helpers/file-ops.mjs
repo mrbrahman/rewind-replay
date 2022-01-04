@@ -23,7 +23,7 @@ export function listAllFilesForCollection(collection) {
   return files;
 }
 
-export async function getFilesMtime(dir) {
+async function getFilesMtime(dir) {
   let files = lsRecursive(dir);
 
   let result = files.map(f => {
@@ -90,7 +90,7 @@ export function placeFileInCollection(collection, filename, file_date, inPlace=f
       // album is just the date
       dateformat(file_date, 'yyyy-mm-dd');  // TODO: timezone?
   
-      albumFilename = filename;
+    albumFilename = filename;
   } else {
     // i.e. file needs to be moved from listen_path to collection_path
 
@@ -117,7 +117,7 @@ export function placeFileInCollection(collection, filename, file_date, inPlace=f
       subFolder : 
       // album is just the date
       dateformat(file_date, 'yyyy-mm-dd');  // TODO: timezone?
-      albumFilename = newFileName;
+    albumFilename = newFileName;
   }
 
   return {

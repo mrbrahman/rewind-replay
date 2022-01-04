@@ -117,7 +117,7 @@ export async function extractFaceRegions(uuid, buf, xmpregion) {
   console.log(`faces: For ${uuid} generated ${faceExtractPromises.length} in ${performance.now()-start} ms`)
 }
 
-export async function extratVideoThumbnail(uuid, videoFilename){
+export async function generateVideoThumbnail(uuid, videoFilename){
   // convert the callback into a Promise, so caller can "await"
   return new Promise((resolve,reject)=>{
     // use the same thumbnails dir to store vide thumbnail (screenshot) as well.
