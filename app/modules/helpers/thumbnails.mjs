@@ -7,15 +7,13 @@ import {config} from '../../config.mjs';
 
 const sizes = [
   // thumbnails with same aspect ratio as original image
-  {height: 20,  fit: 'inside', suffix: 'fit'},  // small thubnail to give the feel of "loading"
-  // {height: 50,  fit: 'inside', suffix: 'fit'},
-  {height: 100, fit: 'inside', suffix: 'fit'},
-  {height: 250, fit: 'inside', suffix: 'fit'},
-  {height: 500, fit: 'inside', suffix: 'fit'},
+  {height: 20,  fit: 'inside', suffix: 'fit', playIconPx: 5},  // small thubnail to give the feel of "loading"
+  {height: 100, fit: 'inside', suffix: 'fit', playIconPx: 40},
+  {height: 250, fit: 'inside', suffix: 'fit', playIconPx: 100},
+  {height: 500, fit: 'inside', suffix: 'fit', playIconPx: 200},  // TODO: do we really need this?
 
   // square thumbnails
-  {width: 50,  height: 50,  fit: 'cover', suffix: 'center'},
-  // {width: 100, height: 100, fit: 'cover', suffix: 'center'},
+  {width: 50,  height: 50,  fit: 'cover', suffix: 'center', playIconPx: 20}
 ];
 
 const thumbsDir = config.thumbsDir || 
@@ -24,7 +22,6 @@ const thumbsDir = config.thumbsDir ||
     path.join('data', 'thumbnails')
 ;
 
-// TODO: Should face extraction be moved to a separate file?
 const facesDir = config.facesDir || 
   config.dataDir ? 
     path.join(config.dataDir, 'faces') :
@@ -35,7 +32,7 @@ const facesDir = config.facesDir ||
 // when reading the image / buffer with sharp
 // https://github.com/lovell/sharp/issues/1578
 
-export async function createImageThumbnails(uuid, buf){
+export async function createImageThumbnails(uuid, buf, playImageOverlay){
   // We don't want all thumbnails in one directory. Hence, create
   // sub-dirs based on the first 3 chars of the uuid.
   // If we have the uuid in the front end, we can directly go to the
@@ -53,10 +50,20 @@ export async function createImageThumbnails(uuid, buf){
   }
 
   let thumbnailPromises = sizes.map(s=>{
-    // return a promise
-    sharp(buf, { failOnError: false })
+    // sharp returns itself until a 'write' (e.g. toFile) operation is invoked,
+    // at which time a promise is returned
+    let sharpInstance = sharp(buf, { failOnError: false })
       .rotate()  // rotate based on exif Orientation
       .resize(s)
+    ;
+    if (playImageOverlay){
+      sharpInstance
+        // TODO: find out how to specify folder for these images
+        .composite([{input: `app/modules/helpers/play-button-${s.playIconPx}.png`}]) // default center overlay
+    }
+
+    // return a promise
+    return sharpInstance
       .toFile(path.join(
         imageThumbsDir,
         `${uuid}_${s.height}_${s.suffix}.jpg`

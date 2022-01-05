@@ -1,5 +1,4 @@
 import * as fs from 'fs';
-import * as path from 'path';
 import {EventEmitter} from 'events';
 
 import {v4 as uuidv4} from 'uuid';
@@ -56,18 +55,18 @@ async function indexFile(collection, sourceFileName, uuid, inPlace){
   // Step 4: Video thumbnail extraction
   if(p.mediatype == "video" || p.mediatype == "image"){
 
-    let imageFileName = p.filename;
+    let imageFileName = p.filename, playImageOverlay=false;
     if(p.mediatype == "video"){
       // extract video thumbnail (screenshot) and use that image to extract image thumbs
       imageFileName = await thumbs.generateVideoThumbnail(p.uuid, p.filename);
-      // TODO: need to overlay "play" button on video thumbnails
+      playImageOverlay=true;
     }
 
     // read image once
     let buf = fs.readFileSync(imageFileName);
     
     // thumbnails generation
-    await thumbs.createImageThumbnails(p.uuid, buf);
+    await thumbs.createImageThumbnails(p.uuid, buf, playImageOverlay);
 
     // face region extraction (if present)
     if (p.xmpregion
