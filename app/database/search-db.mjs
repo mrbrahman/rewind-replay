@@ -150,3 +150,21 @@ export function runSearch(collection_id, searchStr){
   
   return stmt.all()
 }
+
+// photos grouped by album
+// with t as (
+//   select album, aspectratio, uuid, mimetype, file_date
+//   from metadata
+//   order by album desc, file_date desc
+// )
+// select album, 
+//   json_group_array(
+//     json_object(
+//       'ar', round(aspectratio, 1), 
+//       'id', uuid, 
+//       'm', mimetype,
+//       'fd', file_date
+//     )
+//   ) as json_files 
+// from t
+// order by album desc
