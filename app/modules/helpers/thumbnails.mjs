@@ -4,16 +4,17 @@ import {default as sharp} from 'sharp';
 import {default as ffmpeg} from 'fluent-ffmpeg';
 
 import {config} from '../../config.mjs';
+import {overlays} from './overlays/all-overlays.mjs';
 
 const sizes = [
-  // thumbnails with same aspect ratio as original image
-  {height: 20,  fit: 'inside', suffix: 'fit', playIconPx: 5},  // small thubnail to give the feel of "loading"
-  {height: 100, fit: 'inside', suffix: 'fit', playIconPx: 40},
-  {height: 250, fit: 'inside', suffix: 'fit', playIconPx: 100},
-  {height: 500, fit: 'inside', suffix: 'fit', playIconPx: 200},  // TODO: do we really need this?
+  // below are thumbnails with same aspect ratio as original image
+  {height: 20,  fit: 'inside', suffix: 'fit', playIcon: 'play-button-5.png'},  // small thubnail to give the feel of "loading"
+  {height: 100, fit: 'inside', suffix: 'fit', playIcon: 'play-button-40.png'},
+  {height: 250, fit: 'inside', suffix: 'fit', playIcon: 'play-button-100.png'},
+  {height: 500, fit: 'inside', suffix: 'fit', playIcon: 'play-button-200.png'},  // TODO: do we really need this?
 
-  // square thumbnails
-  {width: 50,  height: 50,  fit: 'cover', suffix: 'center', playIconPx: 20}
+  // below is a square thumbnail
+  {width: 50,  height: 50,  fit: 'cover', suffix: 'center', playIcon: 'play-button-20.png'}
 ];
 
 const thumbsDir = config.thumbsDir || 
@@ -58,8 +59,7 @@ export async function createImageThumbnails(uuid, buf, playImageOverlay){
     ;
     if (playImageOverlay){
       sharpInstance
-        // TODO: find out how to specify folder for these images
-        .composite([{input: `app/modules/helpers/play-button-${s.playIconPx}.png`}]) // default center overlay
+        .composite([{input: overlays[s.playIcon]}]) // default center overlay
     }
 
     // return a promise
