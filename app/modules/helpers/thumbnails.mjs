@@ -29,7 +29,7 @@ const facesDir = config.facesDir ||
     path.join('data', 'faces')
 ;
 
-// Not Samsung phones have issue, which needs {failOnError: true}
+// Note Samsung phones have issue, which needs {failOnError: true}
 // when reading the image / buffer with sharp
 // https://github.com/lovell/sharp/issues/1578
 
