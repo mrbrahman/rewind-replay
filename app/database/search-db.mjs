@@ -174,6 +174,7 @@ export function getAllFromCollection(collection_id){
     select uuid as filename, aspectratio as aspectRatio, mimetype
     from metadata
     where collection_id = ?
+    and mediatype in ('image', 'video')  -- TODO: add audio
     order by album desc, file_date
   `);
 
