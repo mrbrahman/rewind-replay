@@ -168,3 +168,14 @@ export function runSearch(collection_id, searchStr){
 //   ) as json_files 
 // from t
 // order by album desc
+
+export function getAllFromCollection(collection_id){
+  let stmt = db.prepare(`
+    select uuid as filename, aspectratio as aspectRatio, mimetype
+    from metadata
+    where collection_id = ?
+    order by album desc, file_date
+  `);
+
+  return stmt.all(collection_id)
+}

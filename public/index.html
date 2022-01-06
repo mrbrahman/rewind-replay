@@ -1,1 +1,25 @@
-Hello from rewind-replay!
+<!DOCTYPE html>
+
+<script src="pig.min.js"></script>
+
+<input type="text" id="search" name="search" size="20">
+<input type="button" value="Search-TBD">
+
+<div id='pig'></div>
+
+<script>
+let pigOptions = {
+  spaceBetweenImages: 4,
+  urlForSize: function(filename, size) {
+    return `/getThumbnail?uuid=${filename}&height=${size}`
+  }
+};
+
+let result = fetch('/getAll').then(response=>response.json())
+  .then(result=>{
+    console.log(`got ${result.length}`)
+    var pig = new Pig(result, pigOptions)
+    pig.enable();
+  })
+
+</script>
