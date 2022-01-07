@@ -194,6 +194,7 @@ export function getAllFromCollectionGrouped(collection_id){
       select album, aspectratio, uuid, mimetype, file_date
       from metadata
       where collection_id = ?
+      and mediatype in ('image', 'video')  -- TODO: add audio
       order by album desc, file_date
     )
     select album as groupid, 
