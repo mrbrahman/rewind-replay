@@ -151,18 +151,6 @@ export function runSearch(collection_id, searchStr){
   return stmt.all()
 }
 
-export function getAllFromCollection(collection_id){
-  let stmt = db.prepare(`
-    select uuid as filename, aspectratio as aspectRatio, mimetype
-    from metadata
-    where collection_id = ?
-    and mediatype in ('image', 'video')  -- TODO: add audio
-    order by album desc, file_date
-  `);
-
-  return stmt.all(collection_id)
-}
-
 function transformSearchResultsFromDb(rows){
   return rows.map(row=>{
     row['images'] = JSON.parse(row['images']);
@@ -170,7 +158,7 @@ function transformSearchResultsFromDb(rows){
   });
 }
 
-export function getAllFromCollectionGrouped(collection_id){
+export function getAllFromCollection(collection_id){
   let stmt = db.prepare(`
     with t as (
       select album, aspectratio, uuid, mimetype, file_date

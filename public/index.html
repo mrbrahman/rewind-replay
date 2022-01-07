@@ -8,20 +8,6 @@
 <div id='pig'></div>
 
 <script>
-// let pigOptions = {
-//   spaceBetweenImages: 4,
-//   urlForSize: function(filename, size) {
-//     return `/getThumbnail?uuid=${filename}&height=${size}`
-//   }
-// };
-
-// let result = fetch('/getAll').then(response=>response.json())
-//   .then(result=>{
-//     console.log(`got ${result.length}`)
-//     var pig = new Pig(result, pigOptions)
-//     pig.enable();
-//   })
-
 let pigOptions = {
   spaceBetweenImages: 4,
   urlForSize: function(filename, size) {
@@ -41,6 +27,6 @@ let result = fetch('/getAllGrouped').then(response=>response.json())
     var pig = new Pig(result, pigOptions)
     pig.enable();
   })
-
+;
 
 </script>
