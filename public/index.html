@@ -21,7 +21,7 @@ let pigOptions = {
   newRowPerGroup: true
 };
 
-let result = fetch('/getAllGrouped').then(response=>response.json())
+let result = fetch('/getAll').then(response=>response.json())
   .then(result=>{
     console.log(`got ${result.length}`)
     var pig = new Pig(result, pigOptions)
