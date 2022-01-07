@@ -10,6 +10,10 @@ app.get('/getAll', function(req,res){
   res.json(s.search.getAllFromDefaultCollection());
 });
 
+app.get('/getAllGrouped', function(req,res){
+  res.json(s.search.getAllFromDefaultCollectionGrouped());
+});
+
 app.get('/getThumbnail', function(req,res){
   let {uuid, height} = req.query;
   // console.log(`inputs: uuid ${uuid} height ${height}`)

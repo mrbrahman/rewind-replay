@@ -180,3 +180,35 @@ export function getAllFromCollection(collection_id){
 
   return stmt.all(collection_id)
 }
+
+function transformSearchResultsFromDb(rows){
+  return rows.map(row=>{
+    row['images'] = JSON.parse(row['images']);
+    return row
+  });
+}
+
+export function getAllFromCollectionGrouped(collection_id){
+  let stmt = db.prepare(`
+    with t as (
+      select album, aspectratio, uuid, mimetype, file_date
+      from metadata
+      where collection_id = ?
+      order by album desc, file_date
+    )
+    select album as groupid, 
+      json_group_array(
+        json_object(
+          'aspectRatio', round(aspectratio, 1), 
+          'filename', uuid, 
+          'mimetype', mimetype
+        )
+      ) as images 
+    from t
+    group by album
+    order by album desc
+  `);
+
+  let output = transformSearchResultsFromDb( stmt.all(collection_id) );
+  return output;
+}

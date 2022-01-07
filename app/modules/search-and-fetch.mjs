@@ -9,3 +9,8 @@ export function getAllFromDefaultCollection(){
   let c = getDefaultCollection();
   return db.getAllFromCollection(c.collection_id);
 }
+
+export function getAllFromDefaultCollectionGrouped(){
+  let c = getDefaultCollection();
+  return db.getAllFromCollectionGrouped(c.collection_id);
+}
