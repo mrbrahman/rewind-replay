@@ -19,7 +19,7 @@ class EmitterClass extends EventEmitter {};
 export const indexerEvents = new EmitterClass();
 
 let indexerQueue = pp()
-  .maxConcurrency(config.maxIndexerConcurrency||1)
+  .maxConcurrency(config.maxIndexerConcurrency)
   .emitter(indexerEvents)
 ;
 

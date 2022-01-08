@@ -17,17 +17,8 @@ const sizes = [
   {width: 50,  height: 50,  fit: 'cover', suffix: 'center', playIcon: 'play-button-20.png'}
 ];
 
-const thumbsDir = config.thumbsDir || 
-  config.dataDir ? 
-    path.join(config.dataDir, 'thumbnails') :
-    path.join('data', 'thumbnails')
-;
-
-const facesDir = config.facesDir || 
-  config.dataDir ? 
-    path.join(config.dataDir, 'faces') :
-    path.join('data', 'faces')
-;
+let thumbsDir = config.thumbsDir;  // TODO: check if these change if and when config changes during the run
+let facesDir = config.facesDir;
 
 // Note Samsung phones have issue, which needs {failOnError: true}
 // when reading the image / buffer with sharp

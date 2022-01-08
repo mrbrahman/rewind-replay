@@ -7,11 +7,7 @@ import {config} from '../config.mjs'
 // use the dbFile param, if one is available
 // else see if there is a dataDir defined and create a file there
 // else just create a 'data' directory in the main folder
-const dbFile = config.dbFile || 
-  config.dataDir ? 
-    path.join(config.dataDir, 'MEMORIES-DATABASE.sqlite') :
-    path.join('data', 'MEMORIES-DATABASE.sqlite')
-;
+const dbFile = config.dbFile;
 
 if(!fs.existsSync(path.dirname(dbFile))){
   fs.mkdirSync(path.dirname(dbFile), {recursive: true})

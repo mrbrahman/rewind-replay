@@ -7,8 +7,7 @@ import {addToIndexQueue} from './indexer.mjs';
 export const fileWatcherManagement = watchers();
 
 // setup watch during start-up
-// TODO: change default to true
-if(config.startFileWatcherAtStartup||false){
+if(config.startFileWatcherAtStartup){
   fileWatcherManagement.startWatchersForAllCollections();
 }
 

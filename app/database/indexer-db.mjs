@@ -115,8 +115,8 @@ async function indexerDbTask(entries){
 
 // expose a function to perform db activities in "chunks"
 export const indexerDbWriteInChunks = chunks()
-  .maxWaitTimeBeforeScoopMS(config.dbUpdateTimeout||3000)
-  .maxItemsBeforeScoop(config.dbUpdateChunk||500)
+  .maxWaitTimeBeforeScoopMS(config.indexerDbUpdateTimeout)
+  .maxItemsBeforeScoop(config.indexerDbUpdateChunk)
   .emitter(dbEvents)
   .invokeFunction( (_)=>indexerDbTask(_) )
 ;

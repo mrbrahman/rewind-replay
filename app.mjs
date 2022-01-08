@@ -1,5 +1,8 @@
-import express from 'express';
 import * as path from 'path';
+
+import express from 'express';
+
+import {config} from './app/config.mjs';
 import * as s from './app/services.mjs'
 
 const app = express();
@@ -13,7 +16,7 @@ app.get('/getAll', function(req,res){
 app.get('/getThumbnail', function(req,res){
   let {uuid, height} = req.query;
   // console.log(`inputs: uuid ${uuid} height ${height}`)
-  let fileName = path.join('data', 'thumbnails', ...Array.from(uuid).slice(0,3), `${uuid}_${height}_fit.jpg`);
+  let fileName = path.join(config.thumbsDir, ...Array.from(uuid).slice(0,3), `${uuid}_${height}_fit.jpg`);
   // console.log(`getting thumbnail: ${fileName}`)
   res.sendFile(fileName, {root: '.'});
 })
