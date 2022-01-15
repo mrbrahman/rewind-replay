@@ -13,9 +13,9 @@ process.on('exit', ()=>{
 
 let e = s.indexer.indexerEvents;
 
-e.on('all_done', ()=>{
+e.on('all_done', async ()=>{
   log('completed indexing, cleaning up');
-  s.housekeeping.shutdownCleanup();
+  await s.housekeeping.shutdownCleanup();
 });
 
 s.fileWatcherManagement.startWatchersForAllCollections();

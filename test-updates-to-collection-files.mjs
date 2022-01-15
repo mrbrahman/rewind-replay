@@ -11,9 +11,9 @@ process.on('exit', ()=>{
 });
 
 let e = s.indexer.indexerEvents;
-e.on('all_done', ()=>{
+e.on('all_done', async ()=>{
   log('completed indexing, calling shutdown housekeeping')
-  s.housekeeping.shutdownCleanup();
+  await s.housekeeping.shutdownCleanup();
 });
 
 s.indexer.indexCollection(1, false);

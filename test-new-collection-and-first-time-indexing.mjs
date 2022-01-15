@@ -33,9 +33,9 @@ console.log(colls);
 // for e.g. main app, test suites etc
 
 let e = s.indexer.indexerEvents;
-e.on('all_done', ()=>{
+e.on('all_done', async ()=>{
   log('completed indexing, calling shutdown housekeeping')
-  s.housekeeping.shutdownCleanup();
+  await s.housekeeping.shutdownCleanup();
 });
 
 s.indexer.indexCollection(id, true);
