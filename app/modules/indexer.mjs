@@ -23,6 +23,8 @@ let indexerQueue = pp()
   .emitter(indexerEvents)
 ;
 
+export const inderStats = indexerQueue.stats();
+
 // indexerEvents.on('start', (_)=>{console.log(`starting ${_}`)});
 // indexerEvents.on('end', (_)=>{console.log(`finished ${_}`)});
 // indexerEvents.on('all_done', (_)=>{console.log(`completed batch`)});
