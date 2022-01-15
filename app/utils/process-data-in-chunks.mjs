@@ -40,15 +40,17 @@ export function ProcessDataInChunks(){
 
   const doTask = function(){
     clearTimeout(timer);
-    let scoop = arr.splice(0, arr.length);
+    if(arr.length>0){
+      let scoop = arr.splice(0, arr.length);
     
-    invokeFunction(scoop)
-      .then(returnValue=>{
-        if(emitter){
-          emitter.emit('ran', returnValue)
-        }
-      });
-    ;
+      invokeFunction(scoop)
+        .then(returnValue=>{
+          if(emitter){
+            emitter.emit('ran', returnValue)
+          }
+        });
+      ;
+    } // if arr.length>0
   }
 
   let process = function(){
