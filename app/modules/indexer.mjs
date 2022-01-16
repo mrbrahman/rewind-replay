@@ -23,7 +23,7 @@ let indexerQueue = pp()
   .emitter(indexerEvents)
 ;
 
-export const inderStats = indexerQueue.stats();
+export const indexerStats = ()=>indexerQueue.stats();
 
 // indexerEvents.on('start', (_)=>{console.log(`starting ${_}`)});
 // indexerEvents.on('end', (_)=>{console.log(`finished ${_}`)});
