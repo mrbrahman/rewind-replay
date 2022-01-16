@@ -31,7 +31,7 @@ export const indexerStats = ()=>indexerQueue.stats();
 
 indexerEvents.on('error', (item, error)=>{
   console.log(`IndexerEvents got error: ${item} ${error}`);
-  throw error;
+  throw error;  // TODO: cannot crash node. Need some kind of error handling
 })
 
 export function addToIndexQueue(collection, filename, uuid, inPlace){
