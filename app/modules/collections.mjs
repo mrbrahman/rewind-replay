@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
+import {fileWatcherManagement as watcher} from './watcher.mjs';
 import * as db from '../database/collection-db.mjs';
 
 export function createNewCollection(record){
@@ -20,6 +21,8 @@ export function createNewCollection(record){
   }
   
   let id = db.createNewCollection(record);
+  watcher.startWatcherForCollection({collection_id: id, ...record});
+  
   return id;
 } 
 

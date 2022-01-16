@@ -1,10 +1,12 @@
 import { db } from './sqlite-database.mjs';
 
 function transformEntryToDb(row){
+  // make a copy of the object, don't change the original
+  let tRow = Object.assign({}, row);
   ['listen_paths'].map(c=>{
-    row[c] = JSON.stringify(row[c])
+    tRow[c] = JSON.stringify(tRow[c])
   });
-  return row;
+  return tRow;
 }
 
 function transformEntryFromDb(row){
