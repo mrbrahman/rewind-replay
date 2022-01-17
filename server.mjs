@@ -56,7 +56,7 @@ server.post('/startIndexingFirstTime', async function(req,res){
 
 server.get('/getIndexerStats', function(req,res){
   res.send(s.indexer.indexerStats());
-})
+});
 
 // *****************************************
 // start server
@@ -68,7 +68,7 @@ process.on('SIGINT', async function(){
   server.close;
   console.log('Server shutdown. Ending process... ');
   process.exit(0)
-})
+});
 
 server.listen(9000, ()=>{
   console.log("Server started and listening in port 9000!");
