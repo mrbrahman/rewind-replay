@@ -106,6 +106,7 @@ async function deleteFromCollection(uuid){
 }
 
 export async function indexCollection(collection_id, firstTime=false){
+  // TODO: should this accept a collection instead of collection_id?
   let c = collections.getCollection(collection_id);
   let files = [];
 

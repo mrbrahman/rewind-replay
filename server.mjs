@@ -6,8 +6,8 @@ import {config} from './app/config.mjs';
 import * as s from './app/services.mjs'
 
 const server = express();
-server.use(express.json())
 
+server.use(express.json())
 server.use(express.static('public'));
 
 // *****************************************
@@ -72,4 +72,6 @@ process.on('SIGINT', async function(){
 
 server.listen(9000, ()=>{
   console.log("Server started and listening in port 9000!");
+  // Perform startup activities
+  s.housekeeping.startUpActivities();
 });

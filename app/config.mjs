@@ -3,8 +3,10 @@ import * as path from 'path';
 const config = {};
 
 // set defaults
-// watcher
+
+// monitor files
 config.startFileWatcherAtStartup = true;
+config.scanFilesForChangesAndIndexAtStartup = true;
 
 // indexer
 config.indexerDbUpdateTimeout = 3000;

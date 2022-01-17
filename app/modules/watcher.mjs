@@ -7,11 +7,6 @@ import {addToIndexQueue} from './indexer.mjs';
 // store an array of {collection_id: <id>, listen_path: <path>, watcher: <chokidar watcher>}
 var allWatchers = [];
 
-// setup watch during start-up
-if(config.startFileWatcherAtStartup){
-  startWatchersForAllCollections();
-}
-
 export function startWatchersForAllCollections(){
   let collections = getAllCollections();
 
