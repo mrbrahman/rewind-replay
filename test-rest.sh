@@ -4,4 +4,10 @@ curl -X GET 'http://localhost:9000/getAllCollections'
 
 time curl -X POST 'http://localhost:9000/startIndexingFirstTime?collection_id=1'
 
-curl -X GET 'http://localhost:9000/getIndexerStats' | jq '.'
+curl -X GET 'http://localhost:9000/getIndexerStatus' | jq '.'
+
+curl -X PUT 'http://localhost:9000/pauseIndexer'
+
+curl -X PUT 'http://localhost:9000/updateIndexerConcurrency/2'
+
+curl -X PUT 'http://localhost:9000/resumeIndexer'

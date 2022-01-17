@@ -21,6 +21,6 @@ config.facesDir = path.join(config.dataDir, 'faces');
 // db file
 config.dbFile = path.join(config.dataDir, 'MEMORIES-DATABASE.sqlite')
 
-// TODO: read a yml / json5 file specified as parameter? or node env?
+// TODO: read & write a yml / json5 file specified as parameter? or node env?
 
 export {config};

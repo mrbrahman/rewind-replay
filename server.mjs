@@ -10,6 +10,8 @@ const server = express();
 server.use(express.json())
 server.use(express.static('public'));
 
+// TODO: validate request parameters in all relevant functions?
+
 // *****************************************
 // search, and thumbnails
 // *****************************************
@@ -54,8 +56,28 @@ server.post('/startIndexingFirstTime', async function(req,res){
   res.sendStatus(200);
 });
 
-server.get('/getIndexerStats', function(req,res){
-  res.send(s.indexer.indexerStats());
+server.get('/getIndexerStatus', function(req,res){
+  res.send(s.indexer.indexerStatus());
+});
+
+server.put('/pauseIndexer', function(req,res){
+  s.indexer.pauseIndexer();
+  res.sendStatus(200);
+});
+
+server.put('/resumeIndexer', function(req,res){
+  s.indexer.resumeIndexer();
+  res.sendStatus(200);
+});
+
+// TODO: should concurrency be a param (like below) or query?
+server.put('/updateIndexerConcurrency/:concurrency', function(req,res,next){
+  let {concurrency} = req.params;  // TODO: convert to number....
+
+  if(concurrency){
+    s.indexer.updateIndexerConcurrency(concurrency);
+  }
+  res.sendStatus(200);
 });
 
 // *****************************************

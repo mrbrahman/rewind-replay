@@ -23,7 +23,26 @@ let indexerQueue = pp()
   .emitter(indexerEvents)
 ;
 
-export const indexerStats = ()=>indexerQueue.stats();
+export function pauseIndexer(){
+  indexerQueue.pause();
+}
+
+export function resumeIndexer(){
+  indexerQueue.resume();
+}
+
+export function updateIndexerConcurrency(concurrency){
+  let c = Number(concurrency)
+  // update indexerQueue
+  indexerQueue.maxConcurrency(c);
+
+  // update config
+  config.maxIndexerConcurrency=c;
+
+  // TODO permananet storage?
+}
+
+export const indexerStatus = ()=>indexerQueue.status();
 
 // indexerEvents.on('start', (_)=>{console.log(`starting ${_}`)});
 // indexerEvents.on('end', (_)=>{console.log(`finished ${_}`)});

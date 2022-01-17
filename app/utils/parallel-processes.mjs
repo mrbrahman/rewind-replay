@@ -92,7 +92,7 @@ export function ParallelProcesses(){
 
   my.maxConcurrency = function(_){
     // TODO: handle 0 value
-    return arguments.length ? (maxConcurrency = _, my): maxConcurrency;
+    return arguments.length ? (maxConcurrency = +_, my): maxConcurrency;
   }
 
   my.processInInsertOrder = function(_){
@@ -116,9 +116,9 @@ export function ParallelProcesses(){
     }
   }
 
-  my.stats = function(){
+  my.status = function(){
     return {
-      processingCnt, pendingCnt, completedCnt, failedCnt, paused
+      processingCnt, pendingCnt, completedCnt, failedCnt, paused, maxConcurrency
     }
   }
 
