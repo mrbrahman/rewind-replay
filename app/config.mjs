@@ -4,7 +4,7 @@ const config = {};
 
 // set defaults
 // watcher
-config.startFileWatcherAtStartup = false; // TODO: change default to true
+config.startFileWatcherAtStartup = true;
 
 // indexer
 config.indexerDbUpdateTimeout = 3000;
