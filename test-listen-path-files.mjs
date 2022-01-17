@@ -18,4 +18,4 @@ e.on('all_done', async ()=>{
   await s.housekeeping.shutdownCleanup();
 });
 
-s.fileWatcherManagement.startWatchersForAllCollections();
+s.watcher.startWatchersForAllCollections();

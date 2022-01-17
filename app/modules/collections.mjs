@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import {fileWatcherManagement as watcher} from './watcher.mjs';
+import * as watcher from './watcher.mjs';
 import * as db from '../database/collection-db.mjs';
 
 export function createNewCollection(record){
