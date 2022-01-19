@@ -42,7 +42,7 @@ server.post('/createNewCollection', function(req,res,next){
 });
 
 server.get('/getAllCollections', function(req,res){
-  res.send( s.collections.getAllCollections() )
+  res.json( s.collections.getAllCollections() )
 });
 
 
@@ -57,7 +57,7 @@ server.post('/startIndexingFirstTime', async function(req,res){
 });
 
 server.get('/getIndexerStatus', function(req,res){
-  res.send(s.indexer.indexerStatus());
+  res.json(s.indexer.indexerStatus());
 });
 
 server.put('/pauseIndexer', function(req,res){
