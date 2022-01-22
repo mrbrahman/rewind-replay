@@ -12,6 +12,10 @@
   #search-box {
     max-width: 50%;
   }
+
+  #main-content {
+    margin-top: 55px;
+  }
 </style>
 
 <script src="pig.js"></script>
@@ -19,15 +23,16 @@
 
 <body>
 
-<div id="main-content" class="w3-padding">
+<div id="app-content" class="w3-padding">
   <div id="header" class="w3-padding w3-white w3-top">
     <input id="search-box" class="w3-input w3-border w3-round-large w3-light-grey w3-third" type="text" id="search" name="search" size="20" placeholder="Enter Search Query (*)">
     
     <button class="w3-button w3-round-large w3-grey" style="margin-left:10px" onclick="performSearch()">Search</button>
   </div>
-  <br><br>
 
-  <div id='pig' class='w3-container'></div>
+  <div id="main-content">
+    <div id='pig' class='w3-container'></div>
+  </div>
 </div>
 
 </body>
