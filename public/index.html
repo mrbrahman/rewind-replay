@@ -9,7 +9,7 @@
     /* font-family: Roboto; */
   }
 
-  #search {
+  #search-box {
     max-width: 50%;
   }
 </style>
@@ -19,11 +19,13 @@
 
 <body>
 
-<div class="w3-container w3-padding">
-  <div>
+<div id="main-content" class="w3-padding">
+  <div id="header" class="w3-padding w3-white w3-top">
     <input id="search-box" class="w3-input w3-border w3-round-large w3-light-grey w3-third" type="text" id="search" name="search" size="20" placeholder="Enter Search Query (*)">
-    <input type="button" class="w3-button w3-round-large w3-grey" style="margin-left:10px" value="Search" onclick="performSearch()">
+    
+    <button class="w3-button w3-round-large w3-grey" style="margin-left:10px" onclick="performSearch()">Search</button>
   </div>
+  <br><br>
 
   <div id='pig' class='w3-container'></div>
 </div>
@@ -31,6 +33,17 @@
 </body>
 
 <script>
+  // found at https://tutorial.eyehunts.com/js/call-javascript-function-on-enter-keypress-in-the-textbox-example-code/
+  // eventually use something like this:
+  // https://v3.vuejs.org/guide/events.html#event-modifiers  --> <input @keyup.enter="submit" />
+   var input = document.getElementById("search-box");
+   input.addEventListener("keyup", function (e) {
+    if (e.key === "Enter") {  
+      performSearch();
+    }
+  });
+
+
 let pigOptions = {
   spaceBetweenImages: 4,
   urlForSize: function(filename, size) {
@@ -52,9 +65,36 @@ let result = fetch('/getAll').then(response=>response.json())
   })
 ;
 
-// function performSearch(){
-//   let searchText = document.getElementById("search-box").value;
-//   fetch()
-// }
+function performSearch(){
+  let searchText = document.getElementById("search-box").value;
+  if(!searchText){
+    alert("Enter search text");
+    return;
+  }
+  
+  // remove pig
+  let pigDiv = document.getElementById("pig");
+  pigDiv.remove();
+
+  // add pig
+  let div = document.createElement('div');
+  div.id = 'pig';
+  div.className = 'w3-container';
+
+  let main = document.getElementById('main-content');
+  main.appendChild(div)
+
+  let result = fetch(`/search/${searchText}`).then(response=>response.json())
+  .then(result=>{
+    console.log(`${result.length}`);
+    if(result.length>0){
+      var pig = new Pig(result, pigOptions)
+      pig.enable();
+    } else {
+      div.innerHTML = 'No results found...'
+    }
+    
+  })
+}
 
 </script>

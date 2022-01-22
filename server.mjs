@@ -28,6 +28,11 @@ server.get('/getThumbnail', function(req,res){
   res.sendFile(fileName, {root: '.'});
 });
 
+server.get('/search/:searchText', function(req,res){
+  let {searchText} = req.params;
+  res.json(s.search.search(1, searchText)); // TODO: collection_id
+})
+
 // *****************************************
 // collection functions
 // *****************************************

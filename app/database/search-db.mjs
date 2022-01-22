@@ -140,15 +140,30 @@ export function runSearch(collection_id, searchStr){
   }
 
   let sql = `
-  select *
-    -- uuid, album, filename, aspectratio, mimetype
-  from metadata
-  where ${filters.join(' and ')}
+  with t as (
+    select album, aspectratio, uuid, mimetype, file_date
+    from metadata
+    where ${filters.join(' and ')}
+    and mediatype in ('image', 'video')  -- TODO: add audio
+    order by album desc, file_date
+  )
+  select album as groupid, 
+    json_group_array(
+      json_object(
+        'aspectRatio', round(aspectratio, 1), 
+        'filename', uuid, 
+        'mimetype', mimetype
+      )
+    ) as images 
+  from t
+  group by album
+  order by album desc
   `
   console.error(sql)
   var stmt = db.prepare(sql)
   
-  return stmt.all()
+  let output = transformSearchResultsFromDb( stmt.all() );
+  return output;
 }
 
 function transformSearchResultsFromDb(rows){
