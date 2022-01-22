@@ -1,11 +1,34 @@
 <!DOCTYPE html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="w3.css">
+<style>
+  /* overwrite w3 font family */
+  body, h1, h2, h3, h4, h5, h6 {
+    font-family: -apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    /* font-family: Roboto; */
+  }
 
-<script src="pig.min.js"></script>
+  #search {
+    max-width: 50%;
+  }
+</style>
 
-<input type="text" id="search" name="search" size="20">
-<input type="button" value="Search-TBD">
+<script src="pig.js"></script>
+</head>
 
-<div id='pig'></div>
+<body>
+
+<div class="w3-container w3-padding">
+  <div>
+    <input id="search-box" class="w3-input w3-border w3-round-large w3-light-grey w3-third" type="text" id="search" name="search" size="20" placeholder="Enter Search Query (*)">
+    <input type="button" class="w3-button w3-round-large w3-grey" style="margin-left:10px" value="Search" onclick="performSearch()">
+  </div>
+
+  <div id='pig' class='w3-container'></div>
+</div>
+
+</body>
 
 <script>
 let pigOptions = {
@@ -16,7 +39,7 @@ let pigOptions = {
   //groupTagName: 'album',
   enableGroupHeadline: true,
   getGroupHeadlineHTML: function(groupid) {
-    return '<h3>' + groupid + '</h3>';
+    return '<p>' + groupid + '</p>';
   },
   newRowPerGroup: true
 };
@@ -28,5 +51,10 @@ let result = fetch('/getAll').then(response=>response.json())
     pig.enable();
   })
 ;
+
+// function performSearch(){
+//   let searchText = document.getElementById("search-box").value;
+//   fetch()
+// }
 
 </script>
