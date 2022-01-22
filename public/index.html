@@ -44,57 +44,57 @@
   });
 
 
-let pigOptions = {
-  spaceBetweenImages: 4,
-  urlForSize: function(filename, size) {
-    return `/getThumbnail?uuid=${filename}&height=${size}`
-  },
-  //groupTagName: 'album',
-  enableGroupHeadline: true,
-  getGroupHeadlineHTML: function(groupid) {
-    return '<p>' + groupid + '</p>';
-  },
-  newRowPerGroup: true
-};
+  let pigOptions = {
+    spaceBetweenImages: 4,
+    urlForSize: function(filename, size) {
+      return `/getThumbnail?uuid=${filename}&height=${size}`
+    },
+    //groupTagName: 'album',
+    enableGroupHeadline: true,
+    getGroupHeadlineHTML: function(groupid) {
+      return '<p>' + groupid + '</p>';
+    },
+    newRowPerGroup: true
+  };
 
-let result = fetch('/getAll').then(response=>response.json())
-  .then(result=>{
-    console.log(`got ${result.length}`)
-    var pig = new Pig(result, pigOptions)
-    pig.enable();
-  })
-;
-
-function performSearch(){
-  let searchText = document.getElementById("search-box").value;
-  if(!searchText){
-    alert("Enter search text");
-    return;
-  }
-  
-  // remove pig
-  let pigDiv = document.getElementById("pig");
-  pigDiv.remove();
-
-  // add pig
-  let div = document.createElement('div');
-  div.id = 'pig';
-  div.className = 'w3-container';
-
-  let main = document.getElementById('main-content');
-  main.appendChild(div)
-
-  let result = fetch(`/search/${searchText}`).then(response=>response.json())
-  .then(result=>{
-    console.log(`${result.length}`);
-    if(result.length>0){
+  let result = fetch('/getAll').then(response=>response.json())
+    .then(result=>{
+      console.log(`got ${result.length}`)
       var pig = new Pig(result, pigOptions)
       pig.enable();
-    } else {
-      div.innerHTML = 'No results found...'
+    })
+  ;
+
+  function performSearch(){
+    let searchText = document.getElementById("search-box").value;
+    if(!searchText){
+      alert("Enter search text");
+      return;
     }
     
-  })
-}
+    // remove pig
+    let pigDiv = document.getElementById("pig");
+    pigDiv.remove();
+
+    // add pig
+    let div = document.createElement('div');
+    div.id = 'pig';
+    div.className = 'w3-container';
+
+    let main = document.getElementById('main-content');
+    main.appendChild(div)
+
+    let result = fetch(`/search/${searchText}`).then(response=>response.json())
+    .then(result=>{
+      console.log(`${result.length}`);
+      if(result.length>0){
+        var pig = new Pig(result, pigOptions)
+        pig.enable();
+      } else {
+        div.innerHTML = 'No results found...'
+      }
+      
+    })
+  }
 
 </script>
