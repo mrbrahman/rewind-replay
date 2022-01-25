@@ -32,7 +32,7 @@ function converToSQLQueryStr(searchStr){
   // implement date search including ranges
 
   const options = {
-    keywords: ['album', 'keywords', 'tags', 'people', 'faces', 'type', 'mediatype', 'objects', 'rating', 'camera', 'make', 'model', 'date', 'on', 'l', 'logical', 'raw'],
+    keywords: ['album', 'keywords', 'tags', 'people', 'faces', 'face', 'type', 'mediatype', 'objects', 'rating', 'camera', 'make', 'model', 'date', 'on', 'l', 'logical', 'raw'],
     //ranges: ['between', 'dates'],  TODO:?
     alwaysArray: true,
     tokenize: true,
@@ -43,6 +43,7 @@ function converToSQLQueryStr(searchStr){
   const aliases = {
     tags: 'keywords',
     people: 'faces',
+    face: 'faces',
     camera: 'model',
     type: 'mediatype',
     on: 'file_date',
