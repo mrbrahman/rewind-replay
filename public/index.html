@@ -6,15 +6,34 @@
   /* overwrite w3 font family */
   body, h1, h2, h3, h4, h5, h6 {
     font-family: -apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-    /* font-family: Roboto; */
+  }
+
+  #header {
+    padding-top: 4px;
+  }
+
+  #main-content {
+    margin-top: 60px;
+  }
+
+  .home {
+    cursor: pointer;
+  }
+
+  #logo {
+    padding: 8px 16px 8px 0px;
+  }
+
+  #title {
+    font-weight: bold;
   }
 
   #search-box {
     max-width: 50%;
   }
 
-  #main-content {
-    margin-top: 55px;
+  @media(max-width:601px) {
+    #search-button, #title {display: none}
   }
 </style>
 
@@ -23,11 +42,16 @@
 
 <body>
 
-<div id="app-content" class="w3-padding">
-  <div id="header" class="w3-padding-16 w3-white w3-top">
-    <input id="search-box" class="w3-input w3-border w3-round-large w3-light-grey w3-third" type="text" id="search" name="search" size="20" placeholder="Enter Search Query (*)">
+<div id="app-content" class="">
+  <div id="header" class="w3-bar w3-white w3-border-top w3-border-bottom w3-top">
+    <img id="logo" class="home w3-bar-item"src="R3-small.png" alt="Relive!" onclick="window.location.reload();">
+    <div id="title" class="home w3-bar-item" onclick="window.location.reload();">Rewind,Replay Relive!</div>
+
+    <input id="search-box" class="w3-bar-item w3-input w3-border w3-round-large w3-light-grey w3-third" type="text" id="search" name="search" size="150" placeholder="Search your memories...">
     
-    <button class="w3-button w3-round-large w3-grey" style="margin-left:10px" onclick="performSearch()">Search</button>
+    <button id="search-button" class="w3-bar-item w3-button w3-round-large w3-grey" style="margin-left:10px" onclick="performSearch()">Search</button>
+
+    <div class="w3-bar-item w3-xlarge w3-circle w3-button w3-right"><span>&#9881;</span></div>
   </div>
 
   <div id="main-content">
@@ -96,7 +120,7 @@
         var pig = new Pig(result, pigOptions)
         pig.enable();
       } else {
-        div.innerHTML = 'No results found...'
+        div.textContent = 'No results found...'
       }
       
     })
