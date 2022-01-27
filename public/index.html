@@ -83,7 +83,7 @@
     getGroupHeadlineHTML: function(groupid) {
       return '<p>' + groupid + '</p>';
     },
-    newRowPerGroup: true
+    newRowPerGroup: false
   };
 
   let result = fetch('/getAll').then(response=>response.json())
