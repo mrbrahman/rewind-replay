@@ -164,5 +164,8 @@ export function updateAlbum(collection_id, fromAlbum, toAlbum){
     fileOps.renameFolder(c, fromAlbum, toAlbum);
   }
   
-  return db.updateAlbum(collection_id, fromAlbum, toAlbum);
+  return db.updateAlbum(
+    collection_id, fromAlbum, toAlbum, 
+    c.album_type=="FOLDER_ALBUM" ? true : false  // whether to update file name
+  );
 }

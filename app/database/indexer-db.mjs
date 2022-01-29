@@ -141,11 +141,11 @@ export async function getIndexedFilesModifyTime(collection_id){
   }, {})
 }
 
-export function updateAlbum(collection_id, fromAlbum, toAlbum){
+export function updateAlbum(collection_id, fromAlbum, toAlbum, updateFileName){
   let stmt = db.prepare(`
     update metadata
     set album = @toAlbum
-      , filename = replace(filename, @fromAlbum, @toAlbum)
+      ${updateFileName ? ", filename = replace(filename, @fromAlbum, @toAlbum)" : ''} 
     where collection_id = @collection_id
     and album = @fromAlbum
   `);
