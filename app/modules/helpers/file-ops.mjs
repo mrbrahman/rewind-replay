@@ -125,3 +125,11 @@ export function placeFileInCollection(collection, filename, file_date, inPlace=f
     filename: albumFilename
   }
 }
+
+export function renameFolder(collection, currAlbum, newAlbum){
+  let currFolderName=path.join(collection.collection_path,currAlbum),
+    newFolderName=path.join(collection.collection_path,newAlbum)
+  ;
+  
+  fs.renameSync(currFolderName, newFolderName)
+}

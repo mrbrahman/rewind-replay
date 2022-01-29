@@ -86,6 +86,17 @@ server.put('/updateIndexerConcurrency/:concurrency', function(req,res,next){
 });
 
 // *****************************************
+// album organization
+// *****************************************
+server.post('/updateAlbumName', function(req,res){
+  let {collection_id, currAlbumName, newAlbumName} = req.body;
+  let updates = s.indexer.updateAlbum(collection_id, currAlbumName, newAlbumName);
+
+  res.json(updates);
+});
+
+
+// *****************************************
 // start server
 // *****************************************
 

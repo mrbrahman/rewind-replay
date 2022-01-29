@@ -157,3 +157,12 @@ export async function indexCollection(collection_id, firstTime=false){
   );
 }
 
+export function updateAlbum(collection_id, fromAlbum, toAlbum){
+  let c = collections.getCollection(collection_id);
+  
+  if(c.album_type=="FOLDER_ALBUM"){
+    fileOps.renameFolder(c, fromAlbum, toAlbum);
+  }
+  
+  return db.updateAlbum(collection_id, fromAlbum, toAlbum);
+}

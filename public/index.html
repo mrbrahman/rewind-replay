@@ -35,6 +35,33 @@
   @media(max-width:601px) {
     #search-button, #title {display: none}
   }
+
+  .albumName {
+    display: inline-block;
+  }
+
+  [contenteditable] {
+    padding: .25em 0em;
+    /* margin: 1em 0; */
+    transition: padding .3s ease-in-out;
+  }
+
+  [contenteditable]:hover,
+  [contenteditable]:focus {
+    padding: .25em;
+  }
+
+  [contenteditable]:hover {
+    background: #fafafa;
+    outline: 2px solid #eee;
+  }
+
+  [contenteditable]:focus {
+    background: #efefef;
+    outline: 2px solid green;
+  }
+
+
 </style>
 
 <script src="pig.js"></script>
@@ -55,7 +82,9 @@
   </div>
 
   <div id="main-content">
-    <div id='pig' class='w3-container'></div>
+    <div id="pig-wrapper">
+      <div id='pig' class='w3-container'></div>
+    </div>
   </div>
 </div>
 
@@ -72,7 +101,6 @@
     }
   });
 
-
   let pigOptions = {
     spaceBetweenImages: 4,
     urlForSize: function(filename, size) {
@@ -81,9 +109,10 @@
     //groupTagName: 'album',
     enableGroupHeadline: true,
     getGroupHeadlineHTML: function(groupid) {
-      return '<p>' + groupid + '</p>';
+      // retain div in case I plan to add "save" and "undo" buttons later
+      return `<div class="albumName"><p contenteditable="true">${groupid}</p></div>`;
     },
-    newRowPerGroup: false
+    newRowPerGroup: true
   };
 
   let result = fetch('/getAll').then(response=>response.json())
@@ -110,7 +139,7 @@
     div.id = 'pig';
     div.className = 'w3-container';
 
-    let main = document.getElementById('main-content');
+    let main = document.getElementById('pig-wrapper');
     main.appendChild(div)
 
     let result = fetch(`/search/${searchText}`).then(response=>response.json())
@@ -125,5 +154,52 @@
       
     })
   }
+
+  // handle album name changes
+  // add a listener to the pig parent div
+  document.getElementById('pig-wrapper').addEventListener('click', function(e){
+    // check if click was on the album name
+    if(e.target && e.target.matches('[contenteditable]')){
+      let p = e.target;
+      let origLabel = p.innerText.replaceAll(/(\n|<br>)/ig, '');
+
+      // position to cursor to enable easy editing
+      let len = origLabel.length;
+      let tbd = origLabel.search(/(Sush Phone |Shreyas Phone )?TBD/g);
+
+      var range = document.createRange()
+      var sel = window.getSelection()
+
+      range.setStart(p.childNodes[0], tbd >=0? tbd : len);
+      range.setEnd(p.childNodes[0], len);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      
+      p.onblur = async function updateAlbumName(){
+        console.log('out-of-focus now');
+        let newLabel = p.innerText.replaceAll(/(\n|<br>)/ig, '');
+        console.log(`orig: ${origLabel} new: ${newLabel}`)
+
+        if(origLabel!=newLabel){
+          let updates = await fetch('/updateAlbumName', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({collection_id: 1, currAlbumName: origLabel, newAlbumName: newLabel})
+          }).then(response=>response.json());
+          
+          console.log(`updated ${updates} files`);
+
+        } else {
+          console.log('Album name unchanged')
+        }
+
+        this.removeEventListener('onblur', updateAlbumName)
+      }
+
+      console.log(`album name clicked: ${p.innerText}`)
+    }
+  })
 
 </script>
