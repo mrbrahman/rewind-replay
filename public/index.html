@@ -189,7 +189,7 @@
             body: JSON.stringify({collection_id: 1, currAlbumName: origLabel, newAlbumName: newLabel})
           }).then(response=>response.json());
           
-          console.log(`updated ${updates} files`);
+          console.log(`updated ${updates.changes} files`);
 
         } else {
           console.log('Album name unchanged')
