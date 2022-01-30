@@ -16,6 +16,7 @@ server.use(express.static('public'));
 // search, and thumbnails
 // *****************************************
 
+// TODO: rename this
 server.get('/getAll', function(req,res){
   res.json(s.search.getAllFromDefaultCollection());
 });

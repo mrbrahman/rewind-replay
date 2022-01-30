@@ -99,7 +99,7 @@ function converToSQLQueryStr(searchStr){
   //   }
   // }
 
-  console.error(parsedInput);
+  console.log(parsedInput);
   const restrictSearchCols = ['album', 'keywords', 'faces', 'objects', 'mediatype', 'rating', 'make', 'model', 'file_date'];
 
   // TODO: make this better?
@@ -135,7 +135,7 @@ export function runSearch(collection_id, searchStr){
 
   if(searchStr){
     let parsedCondition = converToSQLQueryStr(searchStr);
-    console.error(parsedCondition);
+    console.log(parsedCondition);
 
     filters.push(`metadata MATCH '${parsedCondition}'`)
   }
@@ -160,7 +160,7 @@ export function runSearch(collection_id, searchStr){
   group by album
   order by album desc
   `
-  console.error(sql)
+  console.log(sql)
   var stmt = db.prepare(sql)
   
   let output = transformSearchResultsFromDb( stmt.all() );
@@ -174,28 +174,3 @@ function transformSearchResultsFromDb(rows){
   });
 }
 
-export function getAllFromCollection(collection_id){
-  let stmt = db.prepare(`
-    with t as (
-      select album, aspectratio, uuid, mimetype, file_date
-      from metadata
-      where collection_id = ?
-      and mediatype in ('image', 'video')  -- TODO: add audio
-      order by album desc, file_date
-    )
-    select album as groupid, 
-      json_group_array(
-        json_object(
-          'aspectRatio', round(aspectratio, 1), 
-          'filename', uuid, 
-          'mimetype', mimetype
-        )
-      ) as images 
-    from t
-    group by album
-    order by album desc
-  `);
-
-  let output = transformSearchResultsFromDb( stmt.all(collection_id) );
-  return output;
-}

@@ -5,7 +5,11 @@ export function search(collection_id, searchStr){
   return db.runSearch(collection_id, searchStr);
 }
 
+export function getAllFromCollection(collection_id){
+  return db.runSearch(collection_id)
+}
+
 export function getAllFromDefaultCollection(){
   let c = getDefaultCollection();
-  return db.getAllFromCollection(c.collection_id);
+  return getAllFromCollection(c.collection_id);
 }
