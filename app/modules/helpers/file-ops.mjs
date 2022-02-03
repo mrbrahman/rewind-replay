@@ -18,7 +18,12 @@ function lsRecursive(dir) {
 }
 
 export function listAllFilesForCollection(collection) {
+  let start = performance.now();
+  console.log(`starting to list all files for collection path: ${collection.collection_path}`);
+
   let files = lsRecursive(collection.collection_path);
+  
+  console.log(`finished listing files in ${(performance.now() - start)/1000} secs`)
 
   return files;
 }
