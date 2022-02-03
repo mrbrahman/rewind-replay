@@ -1,6 +1,9 @@
 import {exiftool} from 'exiftool-vendored';
 
 export async function getMetadata(file){
+  // exiftool needs a file, and not buffer
+  // since it is just a wrapper around perl exiftool
+  // https://github.com/photostructure/exiftool-vendored.js/issues/2
   let tags = await exiftool.read(file);
 
   let fileType = (tags["MIMEType"]||"x").split("/")[0],

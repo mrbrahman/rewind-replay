@@ -44,13 +44,25 @@ export function updateIndexerConcurrency(concurrency){
 
 export const indexerStatus = ()=>indexerQueue.status();
 
+export const indexerErrors = [];
+
 // indexerEvents.on('start', (_)=>{console.log(`starting ${_}`)});
 // indexerEvents.on('end', (_)=>{console.log(`finished ${_}`)});
 // indexerEvents.on('all_done', (_)=>{console.log(`completed batch`)});
 
+let indexerBatchStart;
+
+indexerEvents.on('start_batch', ()=>{
+  indexerBatchStart = performance.now();
+});
+
+indexerEvents.on('all_done', ()=>{
+  console.log(`Finished Indexer batch in ${(performance.now()-indexerBatchStart)/1000/60} mins`)
+});
+
 indexerEvents.on('error', (item, error)=>{
   console.log(`IndexerEvents got error: ${item} ${error}`);
-  throw error;  // TODO: cannot crash node. Need some kind of error handling
+  indexerErrors.push(error);
 })
 
 export function addToIndexQueue(collection, filename, uuid, inPlace){
@@ -60,34 +72,55 @@ export function addToIndexQueue(collection, filename, uuid, inPlace){
 async function indexFile(collection, sourceFileName, uuid, inPlace){
   // indexing is a series of steps, where the latter steps
   // are dependent on former steps
-  
   console.log(`Indexing ${sourceFileName}`);
   let fileStart = performance.now();
   
   // Step 1: Read metadata from file
-  var p = await m.getMetadata(sourceFileName);
+  // unfortunately cannot pass buffer here
+  try{
+    var p = await m.getMetadata(sourceFileName);
+  } catch(error){
+    throw `ERROR during getMetadata for file: ${sourceFileName}: ${error}`;
+  }
 
+  // TODO: split this into i) get album name and ii) move the file to collection at the end
   // Step 2: Use the metadata to physically move the file into collection. Determine album
-  let f = fileOps.placeFileInCollection(collection, sourceFileName, p.file_date, inPlace);
-
+  try{
+    var f = fileOps.placeFileInCollection(collection, sourceFileName, p.file_date, inPlace);
+  } catch(error){
+    throw `ERROR during placeFileInCollection for file: ${sourceFileName}: ${error}`;
+  }
+  
   // Step 3: Generate uuid, and make metadata current
-  p = {...p, ...f, uuid: uuid ? uuid : uuidv4(), collection_id: collection.collection_id}
-
+  try{
+    p = {...p, ...f, uuid: uuid ? uuid : uuidv4(), collection_id: collection.collection_id}
+  } catch(error){
+    throw `ERROR during Generate uuid for file: ${sourceFileName}: ${error}`;
+  }
+  
   // Step 4: Video thumbnail extraction
   if(p.mediatype == "video" || p.mediatype == "image"){
 
     let imageFileName = p.filename, playImageOverlay=false;
     if(p.mediatype == "video"){
-      // extract video thumbnail (screenshot) and use that image to extract image thumbs
-      imageFileName = await thumbs.generateVideoThumbnail(p.uuid, p.filename);
-      playImageOverlay=true;
+      try{
+        // extract video thumbnail (screenshot) and use that image to extract image thumbs
+        imageFileName = await thumbs.generateVideoThumbnail(p.uuid, p.filename);
+        playImageOverlay=true;
+      } catch(error){
+        throw `ERROR during generateVideoThumbnail for file: ${sourceFileName}: ${error}`;
+      }
     }
 
     // read image once
     let buf = fs.readFileSync(imageFileName);
-    
+
     // thumbnails generation
-    await thumbs.createImageThumbnails(p.uuid, buf, playImageOverlay);
+    try{
+      await thumbs.createImageThumbnails(p.uuid, buf, playImageOverlay);
+    } catch(error){
+      throw `ERROR during createImageThumbnails for file: ${sourceFileName}: ${error}`;
+    }
 
     // face region extraction (if present)
     if (p.xmpregion
@@ -99,11 +132,14 @@ async function indexFile(collection, sourceFileName, uuid, inPlace){
         // TODO: what should we do when RegionAppliedToDimensions don't match image height and width?
         console.warn(`${imageFileName} has different region dimensions! Actual ${p.ImageWidth}x${p.ImageWidth} vs ${W}x${H}`);
       }
-      await thumbs.extractFaceRegions(p.uuid, buf, p.xmpregion);
+      try{
+        await thumbs.extractFaceRegions(p.uuid, buf, p.xmpregion);
+      } catch(error){
+        throw `ERROR during extractFaceRegions for file: ${sourceFileName}: ${error}`;
+      }
     }
-
   }
-
+  
   // Step 6: Make an entry in db
   db.indexerDbWriteInChunks.add( {action: 'del-insert', data: p} );
 
