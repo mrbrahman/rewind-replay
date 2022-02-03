@@ -49,6 +49,12 @@ export function ParallelProcesses(){
   // this one is not exposed
   let dequeue = function(){
     if (!paused && processingCnt<maxConcurrency && queue.length>0){
+      if(processingCnt == 0){
+        if(emitter){
+          emitter.emit('start_batch');
+        }
+      }
+
       processingCnt++; pendingCnt--;
       let item = processInInsertOrder ? queue.shift() : queue.pop();
       if(emitter){
@@ -91,8 +97,23 @@ export function ParallelProcesses(){
   }
 
   my.maxConcurrency = function(_){
-    // TODO: handle 0 value
-    return arguments.length ? (maxConcurrency = +_, my): maxConcurrency;
+    if(arguments.length){
+      let currentMaxConcurrency = maxConcurrency;
+      if(_ > 0){
+        maxConcurrency = _;
+        if(maxConcurrency > currentMaxConcurrency){
+          // initiate additional dequeue
+          for(let i=1; i<=(maxConcurrency-currentMaxConcurrency); i++){
+            dequeue();
+          }
+        }
+      }
+
+      return my;
+      
+    } else {
+      return maxConcurrency;
+    }
   }
 
   my.processInInsertOrder = function(_){
