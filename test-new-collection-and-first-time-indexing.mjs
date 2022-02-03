@@ -15,7 +15,7 @@ var c = {
   "collection_path": "/home/shreyas/Projects/test-collection/",
   "album_type": "FOLDER_ALBUM",
   "listen_paths": ["/home/shreyas/Projects/test-collection-new-files/"],
-  "apply_folder_pattern": "yyyy/yyyy-mm-dd",
+  "apply_folder_pattern": "yyyy/yyyy-mm-dd 'TBD'",
   "default_collection": 1 // true
 }
 
