@@ -76,9 +76,8 @@ server.put('/resumeIndexer', function(req,res){
   res.sendStatus(200);
 });
 
-// TODO: should concurrency be a param (like below) or query?
 server.put('/updateIndexerConcurrency/:concurrency', function(req,res,next){
-  let {concurrency} = req.params;  // TODO: convert to number....
+  let concurrency = +req.params.concurrency;
 
   if(concurrency){
     s.indexer.updateIndexerConcurrency(concurrency);
