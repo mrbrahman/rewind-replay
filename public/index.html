@@ -142,7 +142,13 @@
     let main = document.getElementById('pig-wrapper');
     main.appendChild(div)
 
-    let result = fetch(`/search/${searchText}`).then(response=>response.json())
+    let result = fetch('/search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({collection_id: 1, searchText}) // TODO: collection_id -- need to maintain state
+    }).then(response=>response.json())
     .then(result=>{
       console.log(`${result.length}`);
       if(result.length>0){
