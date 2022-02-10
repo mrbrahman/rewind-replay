@@ -76,6 +76,10 @@ server.put('/resumeIndexer', function(req,res){
   res.sendStatus(200);
 });
 
+server.get('/getIndexerErrors', function(req,res){
+  res.json( s.indexer.indexerErrors )
+});
+
 server.put('/updateIndexerConcurrency/:concurrency', function(req,res,next){
   let concurrency = +req.params.concurrency;
 
