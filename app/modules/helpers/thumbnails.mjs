@@ -77,7 +77,8 @@ export async function extractFaceRegions(uuid, buf, xmpregion) {
   
   for (let face of faces) {
 
-    let faceDir = path.join(facesDir, face.Name);
+    // TODO: decide what to do about unamed faces in photos while doing blazeface face detection
+    let faceDir = path.join(facesDir, face.Name||'00_anamika');
     if (!fs.existsSync(faceDir)) {
       fs.mkdirSync(faceDir, { recursive: true });
     }
