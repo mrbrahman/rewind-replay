@@ -163,9 +163,11 @@
 
   // handle album name changes
   // add a listener to the pig parent div
+  let nowEditing = false;
   document.getElementById('pig-wrapper').addEventListener('click', function(e){
     // check if click was on the album name
-    if(e.target && e.target.matches('[contenteditable]')){
+    if(!nowEditing && e.target && e.target.matches('[contenteditable]')){
+      nowEditing = true;
       let p = e.target;
       let origLabel = p.innerText.replaceAll(/(\n|<br>)/ig, '');
 
@@ -200,7 +202,7 @@
         } else {
           console.log('Album name unchanged')
         }
-
+        nowEditing = false;
         this.removeEventListener('onblur', updateAlbumName)
       }
 
