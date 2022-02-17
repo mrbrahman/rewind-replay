@@ -146,7 +146,7 @@ async function indexFile(collection, sourceFileName, uuid, inPlace){
   console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
 }
 
-async function deleteFromCollection(uuid){
+export async function deleteFromCollection(uuid){
   let start = performance.now();
   console.log(`DELETE: start to delete for uuid: ${uuid}`);
 
@@ -157,7 +157,7 @@ async function deleteFromCollection(uuid){
   // remove from db
   db.indexerDbWriteInChunks.add( {action: 'delete', data: {uuid: uuid}} );
   
-  console.log(`Completed DELETE for ${uuid} in ${performance.now()-start} ms`)
+  console.log(`Completed DELETE for ${uuid} in ${performance.now()-start} ms`);
 }
 
 export async function indexCollection(collection_id, firstTime=false){
