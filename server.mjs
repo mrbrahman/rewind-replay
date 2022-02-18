@@ -62,11 +62,17 @@ server.post('/startIndexingFirstTime', async function(req,res){
   res.sendStatus(200);
 });
 
+server.post('/indexCollection/:collection_id', function(req,res){
+  let collection_id = req.params.collection_id;
+  s.indexer.indexCollection(collection_id);
+  res.sendStatus(200);
+});
+
 server.delete('/deleteFromCollection/:uuid', function(req,res){
   let uuid = req.params.uuid;
   s.indexer.deleteFromCollection(uuid);
   res.sendStatus(200);
-})
+});
 
 server.get('/getIndexerStatus', function(req,res){
   res.json(s.indexer.indexerStatus());
