@@ -2,11 +2,11 @@ import * as fs from 'fs';
 import path from 'path';
 import Database from 'better-sqlite3';
 
-import {config} from '../config.mjs'
+import {config} from '../config.mjs';
 
-// use the dbFile param, if one is available
-// else see if there is a dataDir defined and create a file there
-// else just create a 'data' directory in the main folder
+// TODO: configure this to run on worker threads
+// https://github.com/JoshuaWise/better-sqlite3/blob/master/docs/threads.md
+
 const dbFile = config.dbFile;
 
 if(!fs.existsSync(path.dirname(dbFile))){
