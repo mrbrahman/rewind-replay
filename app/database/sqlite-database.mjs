@@ -39,7 +39,8 @@ function dbSetup() {
   `);
   var info = stmt.run();
 
-  // metadata (single record per file) table
+  // metadata table (single record per file)
+  // this is an FTS file table, which enables "search" feature
   var stmt = db.prepare(`
     create virtual table if not exists metadata using fts5(
       collection_id, uuid, album, filename,
@@ -52,7 +53,7 @@ function dbSetup() {
   `);
   var info = stmt.run();
 
-  // object details (determined through ML) table
+  // object details table (determined through ML etc.)
   var stmt = db.prepare(`
     create table object_details (
       uuid, frame, how_found,
