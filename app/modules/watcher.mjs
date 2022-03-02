@@ -26,7 +26,7 @@ export function startWatcherForCollection(collection){
     
     allWatchers.push({
       collection_id: collection.collection_id, 
-      listen_path: collection.listen_paths, 
+      listen_path: p, 
       watcher: w
     });
     console.log(`watcher for collection_id: ${collection.collection_id} listen_path: ${p} is now setup`);
@@ -41,6 +41,6 @@ export function stopAllWatchers(){
   allWatchers.map(async function(x){
     console.log(`closing watcher for collection_id: ${x.collection_id} listen_path: ${x.listen_path}`);
     await x['watcher'].close();
-    console.log('watcher closed');
+    console.log(`watcher for ${x.listen_path} closed`);
   })
 }
