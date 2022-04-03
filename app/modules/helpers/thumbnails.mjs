@@ -72,13 +72,18 @@ export async function createImageThumbnails(uuid, buf, playImageOverlay){
 export async function extractFaceRegions(uuid, buf, xmpregion) {
   let start = performance.now();
   
-  let faceExtractPromises = [];
+  let faceExtractPromises=[], parsedFaces=[];
   let faces = xmpregion.RegionList.filter(d => d.Type == 'Face');
   
   for (let face of faces) {
 
-    // TODO: decide what to do about unamed faces in photos while doing blazeface face detection
-    let faceDir = path.join(facesDir, face.Name||'00_anamika');
+    // ignore un-named faces
+    if(!face.Name){
+      console.warn(`${uuid} Skipping face extraction. No face tagged at x: ${face.Area.X} y: ${face.Area.Y} w: ${face.Area.W} h: ${face.Area.H}`);
+      continue;
+    }
+
+    let faceDir = path.join(facesDir, face.Name);
     if (!fs.existsSync(faceDir)) {
       fs.mkdirSync(faceDir, { recursive: true });
     }
@@ -89,6 +94,12 @@ export async function extractFaceRegions(uuid, buf, xmpregion) {
     let [left, width] = [face.Area.X - face.Area.W / 2, face.Area.W].map(x => Math.floor(x * W));
     let [top, height] = [face.Area.Y - face.Area.H / 2, face.Area.H].map(x => Math.floor(x * H));
     console.log(`${uuid} extracting ${left} ${top} ${width} ${height} for ${face.Name}`);
+
+    // check if dimensions are valid
+    if(left+width > W || top+height > H){
+      console.warn(`${uuid} Skipping face extraction. Bad extract area. Pic dimensions w: ${W} h: ${H}`);
+      continue;
+    }
 
     // add a promise
     let facePromise = sharp(buf, { failOnError: false })
@@ -110,10 +121,13 @@ export async function extractFaceRegions(uuid, buf, xmpregion) {
     ;
     
     faceExtractPromises.push(facePromise);
+    parsedFaces.push(face)
   }
 
   await Promise.all(faceExtractPromises);
-  console.log(`faces: For ${uuid} generated ${faceExtractPromises.length} in ${performance.now()-start} ms`)
+  console.log(`faces: For ${uuid} generated ${faceExtractPromises.length} in ${performance.now()-start} ms`);
+
+  return parsedFaces;
 }
 
 export async function generateVideoThumbnail(uuid, videoFilename){

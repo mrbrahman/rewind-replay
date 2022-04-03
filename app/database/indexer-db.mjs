@@ -88,9 +88,9 @@ async function indexerDbTask(entries){
           
           insertMetadata.run( transformDataToMetadataRow(task.data) );
 
-          if(task.data.xmpregion){
+          if(task.data.parsedFaces){
             // TODO: create transformObjectDetailsToDb? what about uuid?
-            task.data.xmpregion.RegionList.forEach(o=>insertObjectDetails.run({
+            task.data.parsedFaces.forEach(o=>insertObjectDetails.run({
               uuid: task.data.uuid,
               frame: '',                    // TODO: future use. may be this will help for video files?
               how_found: task.data.software,    // software that found this
