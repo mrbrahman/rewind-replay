@@ -5,7 +5,7 @@ import {indexCollection, indexerDbFlush} from './indexer.mjs';
 import {exiftool} from 'exiftool-vendored';
 import {startWatchersForAllCollections, stopAllWatchers} from './watcher.mjs';
 
-export async function startUpActivities(){
+export function startUpActivities(){
   // setup watch during start-up
   if(config.startFileWatcherAtStartup){
     startWatchersForAllCollections();
@@ -15,7 +15,9 @@ export async function startUpActivities(){
   if(config.scanFilesForChangesAndIndexAtStartup){
     let collections = getAllCollections();
     for (let c of collections){
-      indexCollection(c.collection_id, false);
+      indexCollection(c.collection_id, false)
+        .then(()=>console.log('done indexing'))
+      ;
     }
   }
 }

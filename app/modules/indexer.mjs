@@ -133,7 +133,7 @@ async function indexFile(collection, sourceFileName, uuid, inPlace){
         console.warn(`${imageFileName} has different region dimensions! Actual ${p.ImageWidth}x${p.ImageWidth} vs ${W}x${H}`);
       }
       try{
-        await thumbs.extractFaceRegions(p.uuid, buf, p.xmpregion);
+        p.parsedFaces = await thumbs.extractFaceRegions(p.uuid, buf, p.xmpregion);
       } catch(error){
         throw `ERROR during extractFaceRegions for file: ${sourceFileName}: ${error}`;
       }
@@ -161,36 +161,49 @@ export function deleteFromCollection(uuid){
 }
 
 export async function indexCollection(collection_id, firstTime=false){
-  // TODO: should this accept a collection instead of collection_id?
-  let c = collections.getCollection(collection_id);
-  let files = [];
 
-  if(firstTime){
-    // save some time, and just get a list of all files
-    files = {added: fileOps.listAllFilesForCollection(c), changed:[], deleted: []};
-  } else {
-    // painstakingly find out which files are added/updated/removed
-    files = await fileOps.listDeltaFilesForCollection(c);
-  }
+  return new Promise(async (resolve, reject)=>{
+    // TODO: should this accept a collection instead of collection_id?
+    let c = collections.getCollection(collection_id);
+    let files = [];
+  
+    if(firstTime){
+      // save some time, and just get a list of all files
+      files = {added: fileOps.listAllFilesForCollection(c), changed:[], deleted: []};
+    } else {
+      // painstakingly find out which files are added/updated/removed
+      files = await fileOps.listDeltaFilesForCollection(c);
+    }
+  
+    // add files to the indexer queue
 
-  // add files to the indexer queue
-  indexerQueue.enqueueMany(
-    files['added'].map(f=>{
-      return ()=>indexFile(c, f, null, true)
-    })
-  );
+    if(files['added'].length > 0){
+      indexerQueue.enqueueMany(
+        files['added'].map(f=>{
+          return ()=>indexFile(c, f, null, true)
+        })
+      );
+    }
+    
+    if(files['changed'].length > 0){
+      indexerQueue.enqueueMany(
+        files['changed'].map(f=>{
+          return ()=>indexFile(c, f.filename, f.uuid, true);
+        })
+      );
+    }
+    
+    if(files['deleted'].length > 0){
+      indexerQueue.enqueueMany(
+        files['deleted'].map(f=>{
+          return ()=>deleteFromCollection(f.uuid);
+        })
+      );
+    }
 
-  indexerQueue.enqueueMany(
-    files['changed'].map(f=>{
-      return ()=>indexFile(c, f.filename, f.uuid, true);
-    })
-  );
-
-  indexerQueue.enqueueMany(
-    files['deleted'].map(f=>{
-      return ()=>deleteFromCollection(f.uuid);
-    })
-  );
+    resolve()
+    
+  })
 }
 
 export function updateAlbum(collection_id, fromAlbum, toAlbum){
