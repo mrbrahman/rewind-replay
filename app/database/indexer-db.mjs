@@ -102,7 +102,7 @@ async function indexerDbTask(entries){
               region_area_h: o.Area.H,
               region_area_unit: o.Area.Unit
             }));
-          } // xmp
+          } // parsedFaces
         }
       } // for loop
     } // end of function
