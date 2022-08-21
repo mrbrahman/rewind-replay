@@ -19,12 +19,12 @@
     "chokidar": "^3.5.2",
     "configstore": "^6.0.0",
     "dateformat": "^5.0.2",
-    "exiftool-vendored": "^15.6.0",
+    "exiftool-vendored": "^17.0.1",
     "express": "^4.17.1",
     "fluent-ffmpeg": "^2.1.2",
     "minimist": "^1.2.5",
     "search-query-parser": "^1.6.0",
-    "sharp": "^0.29.3",
+    "sharp": "^0.30.7",
     "uuid": "^8.3.2"
   }
 }
