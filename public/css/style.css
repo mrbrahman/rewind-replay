@@ -1,0 +1,57 @@
+/* overwrite w3 font family */
+body, h1, h2, h3, h4, h5, h6 {
+  font-family: -apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+
+#header {
+  padding-top: 4px;
+}
+
+#main-content {
+  margin-top: 60px;
+}
+
+.home {
+  cursor: pointer;
+}
+
+#logo {
+  padding: 8px 16px 8px 0px;
+}
+
+#title {
+  font-weight: bold;
+}
+
+#search-box {
+  max-width: 50%;
+}
+
+@media(max-width:601px) {
+  #search-button, #title {display: none}
+}
+
+.albumName {
+  display: inline-block;
+}
+
+[contenteditable] {
+  padding: .25em 0em;
+  /* margin: 1em 0; */
+  transition: padding .3s ease-in-out;
+}
+
+[contenteditable]:hover,
+[contenteditable]:focus {
+  padding: .25em;
+}
+
+[contenteditable]:hover {
+  background: #fafafa;
+  outline: 2px solid #eee;
+}
+
+[contenteditable]:focus {
+  background: #efefef;
+  outline: 2px solid green;
+}

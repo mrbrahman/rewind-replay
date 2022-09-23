@@ -1,214 +1,34 @@
 <!DOCTYPE html>
+
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="w3.css">
-<style>
-  /* overwrite w3 font family */
-  body, h1, h2, h3, h4, h5, h6 {
-    font-family: -apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  }
-
-  #header {
-    padding-top: 4px;
-  }
-
-  #main-content {
-    margin-top: 60px;
-  }
-
-  .home {
-    cursor: pointer;
-  }
-
-  #logo {
-    padding: 8px 16px 8px 0px;
-  }
-
-  #title {
-    font-weight: bold;
-  }
-
-  #search-box {
-    max-width: 50%;
-  }
-
-  @media(max-width:601px) {
-    #search-button, #title {display: none}
-  }
-
-  .albumName {
-    display: inline-block;
-  }
-
-  [contenteditable] {
-    padding: .25em 0em;
-    /* margin: 1em 0; */
-    transition: padding .3s ease-in-out;
-  }
-
-  [contenteditable]:hover,
-  [contenteditable]:focus {
-    padding: .25em;
-  }
-
-  [contenteditable]:hover {
-    background: #fafafa;
-    outline: 2px solid #eee;
-  }
-
-  [contenteditable]:focus {
-    background: #efefef;
-    outline: 2px solid green;
-  }
-
-
-</style>
-
-<script src="pig.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/w3.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
-<div id="app-content" class="">
-  <div id="header" class="w3-bar w3-white w3-border-top w3-border-bottom w3-top">
-    <img id="logo" class="home w3-bar-item"src="R3-small.png" alt="Relive!" onclick="window.location.reload();">
-    <div id="title" class="home w3-bar-item" onclick="window.location.reload();">Rewind,Replay Relive!</div>
+  <div id="app-content" class="">
+    <div id="header" class="w3-bar w3-white w3-border-top w3-border-bottom w3-top">
+      <a href="/" data-navigo><img id="logo" class="home w3-bar-item"src="assets/R3-small.png" alt="Relive!"></a>
+      <a href="/" data-navigo><div id="title" class="home w3-bar-item">Rewind,Replay Relive!</div></a>
 
-    <input id="search-box" class="w3-bar-item w3-input w3-border w3-round-large w3-light-grey w3-third" type="text" id="search" name="search" size="150" placeholder="Search your memories...">
-    
-    <button id="search-button" class="w3-bar-item w3-button w3-round-large w3-grey" style="margin-left:10px" onclick="performSearch()">Search</button>
+      <input id="search-box" class="w3-bar-item w3-input w3-border w3-round-large w3-light-grey w3-third" type="text" id="search" name="search" size="150" placeholder="Search your memories...">
+      
+      <button id="search-button" class="w3-bar-item w3-button w3-round-large w3-grey" style="margin-left:10px">Search</button>
 
-    <div class="w3-bar-item w3-xlarge w3-circle w3-button w3-right"><span>&#9881;</span></div>
-  </div>
+      <div class="w3-bar-item w3-xlarge w3-circle w3-button w3-right"><span>&#9881;</span></div>
+    </div>
 
-  <div id="main-content">
-    <div id="pig-wrapper">
-      <div id='pig' class='w3-container'></div>
+    <div id="main-content">
+      <div id="pig-wrapper">
+      </div>
     </div>
   </div>
-</div>
+
+  <script src="https://unpkg.com/navigo" type="module"></script>
+  <script src="js/lib/pig.js"></script>
+  <script src="js/main.mjs" type="module"></script>
 
 </body>
 
-<script>
-  // found at https://tutorial.eyehunts.com/js/call-javascript-function-on-enter-keypress-in-the-textbox-example-code/
-  // eventually use something like this:
-  // https://v3.vuejs.org/guide/events.html#event-modifiers  --> <input @keyup.enter="submit" />
-   var input = document.getElementById("search-box");
-   input.addEventListener("keyup", function (e) {
-    if (e.key === "Enter") {  
-      performSearch();
-    }
-  });
-
-  let pigOptions = {
-    spaceBetweenImages: 4,
-    urlForSize: function(filename, size) {
-      return `/getThumbnail?uuid=${filename}&height=${size}`
-    },
-    //groupTagName: 'album',
-    enableGroupHeadline: true,
-    getGroupHeadlineHTML: function(groupid) {
-      // retain div in case I plan to add "save" and "undo" buttons later
-      return `<div class="albumName"><p contenteditable="true">${groupid}</p></div>`;
-    },
-    newRowPerGroup: true
-  };
-
-  let result = fetch('/getAll').then(response=>response.json())
-    .then(result=>{
-      console.log(`got ${result.length}`)
-      var pig = new Pig(result, pigOptions)
-      pig.enable();
-    })
-  ;
-
-  function performSearch(){
-    let searchText = document.getElementById("search-box").value;
-    if(!searchText){
-      alert("Enter search text");
-      return;
-    }
-    
-    // remove pig
-    let pigDiv = document.getElementById("pig");
-    pigDiv.remove();
-
-    // add pig
-    let div = document.createElement('div');
-    div.id = 'pig';
-    div.className = 'w3-container';
-
-    let main = document.getElementById('pig-wrapper');
-    main.appendChild(div)
-
-    let result = fetch('/search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({collection_id: 1, searchText}) // TODO: collection_id -- need to maintain state
-    })
-    .then(response=>response.json())
-    .then(result=>{
-      console.log(`${result.length}`);
-      if(result.length>0){
-        var pig = new Pig(result, pigOptions)
-        pig.enable();
-      } else {
-        div.textContent = 'No results found...'
-      }
-      
-    })
-  }
-
-  // handle album name changes
-  // add a listener to the pig parent div
-  let nowEditing = false;
-  document.getElementById('pig-wrapper').addEventListener('click', function(e){
-    // check if click was on the album name
-    if(!nowEditing && e.target && e.target.matches('[contenteditable]')){
-      nowEditing = true;
-      let p = e.target;
-      let origLabel = p.innerText.replaceAll(/(\n|<br>)/ig, '');
-
-      // position to cursor to enable easy editing
-      let len = origLabel.length;
-      let tbd = origLabel.search(/(Sush Phone |Shreyas Phone )?TBD/g);
-
-      var range = document.createRange()
-      var sel = window.getSelection()
-
-      range.setStart(p.childNodes[0], tbd >=0? tbd : len);
-      range.setEnd(p.childNodes[0], len);
-      sel.removeAllRanges();
-      sel.addRange(range);
-      
-      p.onblur = async function updateAlbumName(){
-        console.log('out-of-focus now');
-        let newLabel = p.innerText.replaceAll(/(\n|<br>)/ig, '');
-        console.log(`orig: ${origLabel} new: ${newLabel}`)
-
-        if(origLabel!=newLabel){
-          let updates = await fetch('/updateAlbumName', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({collection_id: 1, currAlbumName: origLabel, newAlbumName: newLabel})
-          }).then(response=>response.json());
-          
-          console.log(`updated ${updates.changes} files`);
-
-        } else {
-          console.log('Album name unchanged')
-        }
-        nowEditing = false;
-        this.removeEventListener('onblur', updateAlbumName)
-      }
-
-      console.log(`album name clicked: ${p.innerText}`)
-    }
-  })
-
-</script>
