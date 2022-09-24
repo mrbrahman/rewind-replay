@@ -1,6 +1,6 @@
 # Rewind-Replay: Relive your (captured) moments!
 
-Rewind-Replay is ... ?
+Rewind-Replay is no frills, self-hosted photos app that helps in organizing and more importantly searching your photos.
 
 # Philosophy
 
@@ -19,14 +19,16 @@ Rewind-Replay is ... ?
 4. **Indexing**: The process of reading media and cataloging metadata to help with search. Also thumbnail generation.
 
 
-# Features
+# Current Features
+- Index media photos, videos and audio
+- Search photos based on their metadata
 
+TODO: add screenshots of current features
 
 # Architecture
 ## Main
 - nodejs server
 - SQLite 3 database
-- Vuejs front-end (TODO)
 
 ## Supporting
 - Sqlite3 provided FTS5 for searches
@@ -44,15 +46,17 @@ Rewind-Replay is ... ?
 Run `sudo apt install sqlite3 g++ ffmpeg` on Linux OS.
 
 # TODO
+**Short Term**
+- Slideshow
+- Mark as favorite / stars
+- Add/change "tags" (keywords)
+- Ability to move / delete files
 
-- Image similarity
-
+**Long Term**
+- An acutal form to setup collections
+- Ability to upload photos from device
 - Face recognition
-    * first do face detection using blazeface
-    * then do landmark detection, and use that as tensor
-    * euclidean distance between faces
-    * think about approaches when 
-        1) no image labels are available
-        2) image lables are available in the images being read! (my use case)
+- Object detection (computer vision)
+- Clustering photos on map
+- PWA
 
-- 
