@@ -1,5 +1,4 @@
-import * as s from './app/services.mjs';
-
+import * as s from '../app/services.mjs';
 import process from 'process';
 
 function log(str){
@@ -12,10 +11,9 @@ process.on('exit', ()=>{
 });
 
 let e = s.indexer.indexerEvents;
-
 e.on('all_done', async ()=>{
-  log('completed indexing, cleaning up');
+  log('completed indexing, calling shutdown housekeeping')
   await s.housekeeping.shutdownCleanup();
 });
 
-s.watcher.startWatchersForAllCollections();
+s.indexer.indexCollection(1, false);
