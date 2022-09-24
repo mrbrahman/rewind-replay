@@ -25,6 +25,25 @@ Rewind-Replay is no frills, self-hosted photos app that helps in organizing and 
 
 TODO: add screenshots of current features
 
+# Features TODO
+**Short Term**
+- Slideshow
+- Mark as favorite / stars
+- Add/change "tags" (keywords)
+- Optional staging area
+- Ability to move / delete files
+- Ability to rename files (mainly videos) similar to folders
+
+**Long Term**
+- An acutal form to setup collections
+- Ability to upload photos from device
+- Intelligent scrollbar (folder levels?)
+- Face recognition
+- Object detection (computer vision)
+- Clustering photos on map
+- PWA
+
+
 # Architecture
 ## Main
 - nodejs server
@@ -39,24 +58,9 @@ TODO: add screenshots of current features
 - Use browser native features (HTML5) to play videos
 
 ## Softwares needed pre-installed
-- SQLite3 (for better-sqlite3)
-- ffmpeg (for fluent-ffmpeg)
-- g++ (for tensorflow.js)
+- [SQLite3](https://www.sqlite.org/download.html) (for better-sqlite3)
+- [ffmpeg](https://ffmpeg.org/download.html) (for fluent-ffmpeg)
+- (for future) g++ (for tensorflow.js)
+
 
 Run `sudo apt install sqlite3 g++ ffmpeg` on Linux OS.
-
-# TODO
-**Short Term**
-- Slideshow
-- Mark as favorite / stars
-- Add/change "tags" (keywords)
-- Ability to move / delete files
-
-**Long Term**
-- An acutal form to setup collections
-- Ability to upload photos from device
-- Face recognition
-- Object detection (computer vision)
-- Clustering photos on map
-- PWA
-
