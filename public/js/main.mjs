@@ -1,6 +1,6 @@
 import * as s from './services.mjs';
 
-const router = new Navigo('/');
+const router = new Navigo('/', {hash: true});
 
 router.on('/', function(){
   fetch('/getAll').then(response=>response.json())
