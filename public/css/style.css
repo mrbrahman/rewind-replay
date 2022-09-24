@@ -4,7 +4,7 @@ body, h1, h2, h3, h4, h5, h6 {
 }
 
 #header {
-  padding-top: 4px;
+  padding: 4px 4px;
 }
 
 #main-content {
@@ -15,9 +15,9 @@ body, h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
 }
 
-#logo {
+/* #logo {
   padding: 8px 16px 8px 0px;
-}
+} */
 
 #title {
   font-weight: bold;
@@ -27,12 +27,21 @@ body, h1, h2, h3, h4, h5, h6 {
   max-width: 50%;
 }
 
-@media(max-width:601px) {
+/* @media(max-width:601px) {
   #search-button, #title {display: none}
+} */
+
+@media(max-width:601px) {
+  #title {display: none}
+}
+
+.pig-group {
+  margin-bottom: 15px;
 }
 
 .albumName {
   display: inline-block;
+  font-weight: bold;
 }
 
 [contenteditable] {
