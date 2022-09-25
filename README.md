@@ -26,7 +26,7 @@ Rewind-Replay is no frills, self-hosted photos app that helps in organizing and 
 TODO: add screenshots of current features
 
 # Features TODO
-**Short Term**
+**Near future**
 - Slideshow
 - Mark as favorite / stars
 - Add/change "tags" (keywords)
@@ -34,10 +34,11 @@ TODO: add screenshots of current features
 - Ability to move / delete files
 - Ability to rename files (mainly videos) similar to folders
 
-**Long Term**
+**After near future**
 - An acutal form to setup collections
 - Ability to upload photos from device
 - Intelligent scrollbar (folder levels?)
+- Status bar for Indexer
 - Face recognition
 - Object detection (computer vision)
 - Clustering photos on map
