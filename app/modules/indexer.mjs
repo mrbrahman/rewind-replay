@@ -86,7 +86,7 @@ async function indexFile(collection, sourceFileName, uuid, inPlace){
   // TODO: split this into i) get album name and ii) move the file to collection at the end
   // Step 2: Use the metadata to physically move the file into collection. Determine album
   try{
-    var f = fileOps.placeFileInCollection(collection, sourceFileName, p.file_date, inPlace);
+    var f = await fileOps.placeFileInCollection(collection, sourceFileName, p.file_date, inPlace);
   } catch(error){
     throw `ERROR during placeFileInCollection for file: ${sourceFileName}: ${error}`;
   }
