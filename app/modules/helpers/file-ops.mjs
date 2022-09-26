@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+const fsPromises = fs.promises;
 import * as path from 'path';
 
 import dateformat from 'dateformat';
@@ -47,7 +48,7 @@ async function getFilesMtime(dir) {
 }
 
 export async function listDeltaFilesForCollection(collection) {
-
+  let start = performance.now();
   // Step 1: list all files and their modify times for collection
   let p1 = getFilesMtime(collection.collection_path);
 
@@ -58,6 +59,7 @@ export async function listDeltaFilesForCollection(collection) {
   let [physicalFiles, databaseEntries] = await Promise.all([p1, p2]);
 
   console.log(`physicalFiles ${Object.keys(physicalFiles).length} databaseEntries: ${Object.keys(databaseEntries).length}`);
+  console.log(`Time taken to figure out files ${(performance.now()-start)/1000/60} mins`)
 
   // Step 4: compare the two and determine which have been added/removed/modified
   let added = [], changed = [], deleted = [];
@@ -66,12 +68,14 @@ export async function listDeltaFilesForCollection(collection) {
     if (!(f in databaseEntries)) {
       added.push(f);
     } else if (physicalFiles[f].mtime > databaseEntries[f].mtime) {
+      // console.log(`${f} is changed`)
       changed.push({ uuid: databaseEntries[f].uuid, filename: f });
     }
   });
 
   Object.keys(databaseEntries).forEach(f => {
     if (!(f in physicalFiles)) {
+      // console.log(`${f} is deleted`)
       deleted.push({ uuid: databaseEntries[f].uuid, filename: f });
     }
   });
@@ -79,7 +83,7 @@ export async function listDeltaFilesForCollection(collection) {
   return { added, changed, deleted };
 }
 
-export function placeFileInCollection(collection, filename, file_date, inPlace=false){
+export async function placeFileInCollection(collection, filename, file_date, inPlace=false){
   let album, albumFilename,
     dir = path.dirname(filename);
 
@@ -115,7 +119,19 @@ export function placeFileInCollection(collection, filename, file_date, inPlace=f
     if(!fs.existsSync(newFolder)){
       fs.mkdirSync(newFolder, {recursive: true})
     }
-    fs.renameSync(filename, newFileName);
+
+    try {
+      // try to fist rename the file. in case the file is in the same mountpoint
+      // this will be faster than copying
+      fs.renameSync(filename, newFileName);
+    } catch (error) {
+      // fs.renameSync does not work across mountpoints
+      // first copy the file and then remove the original file
+      // workaround found at https://stackoverflow.com/questions/43206198/what-does-the-exdev-cross-device-link-not-permitted-error-mean
+      
+      await fsPromises.cp(filename, newFileName, {preserveTimestamps: true});
+      fs.unlinkSync(filename);
+    }
 
     album = collection.album_type=='FOLDER_ALBUM' ? 
       // newly created sub folder becomes the album
