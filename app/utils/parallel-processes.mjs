@@ -63,12 +63,14 @@ export function ParallelProcesses(){
         
       item()
         .then(returnValue=>{
+          console.log('in then '+returnValue);
           processingCnt--; completedCnt++;
           if(emitter){
             emitter.emit('end', item.toString(), returnValue) // TODO: can we log anything better?
           }
         })
         .catch(error=>{
+          console.log('caught error in parallel-processes');
           processingCnt--; failedCnt++;
           if(emitter){
             emitter.emit('error', item.toString(), error); // TODO: can we log anything better?
@@ -84,7 +86,9 @@ export function ParallelProcesses(){
   }
 
   my.start = function(){
-    dequeue()
+    for(let i=1; i<=(maxConcurrency); i++){
+      dequeue();
+    }
   }
 
   my.pause = function(){
