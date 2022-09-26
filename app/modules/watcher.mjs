@@ -1,3 +1,4 @@
+import * as path from 'path';
 import chokidar from 'chokidar';
 
 import {config} from '../config.mjs';
@@ -17,7 +18,12 @@ export function startWatchersForAllCollections(){
 
 export function startWatcherForCollection(collection){
   for(let p of collection.listen_paths){
-    let w = chokidar.watch(p) // TODO: ignore patterns
+    let w = chokidar.watch(p, {
+      ignored: function(filePath) {
+        // ignore dotfiles
+        return /(^[.#]|(?:__|~)$)/.test(path.basename(filePath));
+      }
+    })
       .on('add', file=>{
         console.log(`watcher: ${file} is added`);
         addToIndexQueue(collection, file, null, false);
