@@ -68,8 +68,15 @@ document.getElementById('pig-wrapper').addEventListener('click', function(e){
     range.setEnd(p.childNodes[0], len);
     sel.removeAllRanges();
     sel.addRange(range);
-    
-    p.onblur = async function updateAlbumName(){
+
+    function handleEscape(e) {
+      if (e.key === "Escape") {  
+       p.innerText = origLabel;
+       this.blur();
+      }
+    }
+
+    async function handleOnBlur(){
       console.log('out-of-focus now');
       let newLabel = p.innerText.replaceAll(/(\n|<br>)/ig, '');
       console.log(`orig: ${origLabel} new: ${newLabel}`)
@@ -89,11 +96,16 @@ document.getElementById('pig-wrapper').addEventListener('click', function(e){
         console.log('Album name unchanged')
       }
       nowEditing = false;
-      this.removeEventListener('onblur', updateAlbumName)
+      this.removeEventListener('blur', handleOnBlur);
+      this.removeEventListener('keyup', handleEscape);
     }
 
+    p.addEventListener("keyup", handleEscape);
+    p.addEventListener("blur", handleOnBlur);
+    
     console.log(`album name clicked: ${p.innerText}`)
   }
+
 })
 
 router.resolve();
