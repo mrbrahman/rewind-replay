@@ -152,5 +152,5 @@ export function renameFolder(collection, currAlbum, newAlbum){
     newFolderName=path.join(collection.collection_path,newAlbum)
   ;
   
-  fs.renameSync(currFolderName, newFolderName)
+  fs.renameSync(currFolderName, newFolderName);
 }

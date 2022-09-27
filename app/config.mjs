@@ -21,6 +21,9 @@ config.facesDir = path.join(config.dataDir, 'faces');
 // db file
 config.dbFile = path.join(config.dataDir, 'MEMORIES-DATABASE.sqlite')
 
+// album name change file (file to track album name changes)
+config.albumNameChangesFile = path.join(config.dataDir, 'album_name_changes.txt')
+
 // TODO: read & write a yml / json5 file specified as parameter? or node env?
 
 export {config};

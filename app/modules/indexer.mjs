@@ -1,4 +1,6 @@
 import * as fs from 'fs';
+const fsPromises = fs.promises;
+import {EOL} from 'os';
 import {EventEmitter} from 'events';
 
 import {v4 as uuidv4} from 'uuid';
@@ -206,11 +208,20 @@ export async function indexCollection(collection_id, firstTime=false){
   })
 }
 
-export function updateAlbum(collection_id, fromAlbum, toAlbum){
+export async function updateAlbum(collection_id, fromAlbum, toAlbum){
   let c = collections.getCollection(collection_id);
   
   if(c.album_type=="FOLDER_ALBUM"){
     fileOps.renameFolder(c, fromAlbum, toAlbum);
+  
+    // write out the changes to file
+    // this may help in renaming any backups (for e.g. rsync backups) without having to delete and copy all files
+    if(config.albumNameChangesFile){
+      let f = await fsPromises.open(config.albumNameChangesFile, 'a');
+      await fsPromises.appendFile(f, `${fromAlbum}\t${toAlbum}${EOL}`);
+      f.close();
+    }
+
   }
   
   return db.updateAlbum(

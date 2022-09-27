@@ -104,9 +104,9 @@ server.put('/updateIndexerConcurrency/:concurrency', function(req,res,next){
 // *****************************************
 // album organization
 // *****************************************
-server.post('/updateAlbumName', function(req,res){
+server.post('/updateAlbumName', async function(req,res){
   let {collection_id, currAlbumName, newAlbumName} = req.body;
-  let updates = s.indexer.updateAlbum(collection_id, currAlbumName, newAlbumName);
+  let updates = await s.indexer.updateAlbum(collection_id, currAlbumName, newAlbumName);
 
   res.json(updates);
 });
