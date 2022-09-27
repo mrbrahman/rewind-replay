@@ -9,7 +9,7 @@ let pigOptions = {
   enableGroupHeadline: true,
   getGroupHeadlineHTML: function(groupid) {
     // retain div in case I plan to add "save" and "undo" buttons later
-    return `<div class="albumName"><p contenteditable="true" style="width:100vw">${groupid}</p></div>`;
+    return `<div class="albumName"><p contenteditable="true" spellcheck="false" style="width:100vw">${groupid}</p></div>`;
   },
   newRowPerGroup: true
 };
