@@ -26,7 +26,7 @@ Currently this project is very much a work-in-progress.
 - Display photos and videos on a scrollable grid
 - Search photos based on their metadata
 
-TODO: add screenshots of current features
+![Screenshot](public/assets/Screen-Sizes.jpg)
 
 # Features TODO
 **Near future**
