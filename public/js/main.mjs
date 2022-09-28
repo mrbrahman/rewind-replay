@@ -41,7 +41,7 @@ router.on('/search/:searchText', function({data}){
   })
   .then(response=>response.json())
   .then(result=>{
-    console.log(`got ${result.length}`)
+    console.log(`got ${result.length} albums`)
     s.photogrid.paintPhotoGrid(result)    
   })
 });
