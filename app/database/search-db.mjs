@@ -32,7 +32,7 @@ function converToSQLQueryStr(searchStr){
   // implement date search including ranges
 
   const options = {
-    keywords: ['album', 'keywords', 'tags', 'people', 'faces', 'face', 'type', 'mediatype', 'objects', 'rating', 'camera', 'make', 'model', 'date', 'on', 'l', 'logical', 'raw'],
+    keywords: ['album', 'keywords', 'tags', 'people', 'name', 'faces', 'face', 'type', 'mediatype', 'objects', 'rating', 'camera', 'make', 'model', 'date', 'on', 'l', 'logical', 'raw'],
     //ranges: ['between', 'dates'],  TODO:?
     alwaysArray: true,
     tokenize: true,
@@ -43,6 +43,7 @@ function converToSQLQueryStr(searchStr){
   const aliases = {
     tags: 'keywords',
     people: 'faces',
+    name: 'faces',
     face: 'faces',
     camera: 'model',
     type: 'mediatype',
@@ -122,8 +123,8 @@ function converToSQLQueryStr(searchStr){
     if(c) conditions.push(c);
   }
 
-  let final = conditions.join(` ${logical} `);
-  return final
+  let final = conditions.join(logical);
+  return `metadata match '${final}'`
 
 }
 
@@ -137,8 +138,9 @@ export function runSearch(collection_id, searchStr){
     let parsedCondition = converToSQLQueryStr(searchStr);
     console.log(parsedCondition);
 
-    filters.push(`metadata MATCH '${parsedCondition}'`)
+    filters.push(parsedCondition)
   }
+  // console.log(filters)
 
   let sql = `
   with t as (
