@@ -23,7 +23,7 @@ Currently this project is very much a work-in-progress.
 
 # Current Features
 - Index media photos, videos and audio
-- Display photos and videos on a scrollable grid
+- Display photos and videos on a responsive, progressive, scrollable grid
 - Search photos based on their metadata
 
 ![Screenshot](public/assets/Screen-Sizes.jpg)
