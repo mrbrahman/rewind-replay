@@ -9,7 +9,7 @@ let pigOptions = {
   enableGroupHeadline: true,
   getGroupHeadlineHTML: function(groupid) {
     // retain div in case I plan to add "save" and "undo" buttons later
-    return `<div class="albumName"><p contenteditable="true" spellcheck="false" style="width:100vw">${groupid}</p></div>`;
+    return `<div class="albumName"><p contenteditable="true" spellcheck="false" style="width:99vw">${groupid}</p></div>`;
   },
   newRowPerGroup: true
 };
@@ -80,7 +80,7 @@ document.getElementById('pig-wrapper').addEventListener('click', function(e){
           body: JSON.stringify({collection_id: 1, currAlbumName: origLabel, newAlbumName: newLabel})
         }).then(response=>response.json());
         
-        console.log(`updated ${updates.changes} files`);
+        console.log(`updated for ${updates.changes} files`);
 
       } else {
         console.log('Album name unchanged')
