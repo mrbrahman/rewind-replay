@@ -5,6 +5,7 @@ const router = new Navigo('/', {hash: true});
 router.on('/', function(){
   fetch('/getAll').then(response=>response.json())
     .then(result=>{
+      // window.result = result;
       console.log(`got ${result.length}`)
       s.photogrid.paintPhotoGrid(result)
     })
@@ -22,13 +23,20 @@ searchBox.addEventListener("keyup", function (e) {
 let searchButton = document.getElementById("search-button");
 searchButton.addEventListener("click", performSearch);
 
+// full list: https://en.wikipedia.org/wiki/Percent-encoding#Percent-encoding_reserved_characters
+function escapeHTML(str){
+  return str
+    .replaceAll('%', '%25')
+    .replaceAll('*', '%2A')
+}
+
 function performSearch(){
   let searchText = document.getElementById("search-box").value;
   if(!searchText){
     alert("Enter search text");
     return;
   }
-  router.navigate(`/search/${searchText}`)
+  router.navigate(`/search/${escapeHTML(searchText)}`)
 }
 
 router.on('/search/:searchText', function({data}){
@@ -41,6 +49,7 @@ router.on('/search/:searchText', function({data}){
   })
   .then(response=>response.json())
   .then(result=>{
+    // window.result = result;
     console.log(`got ${result.length} albums`)
     s.photogrid.paintPhotoGrid(result)    
   })
