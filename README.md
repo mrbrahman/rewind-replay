@@ -47,6 +47,49 @@ Currently this project is very much a work-in-progress.
 - Clustering photos on map
 - PWA
 
+# How to install
+
+- **Install necessary software**
+  - [Node](https://nodejs.org/en/) (to run the server)
+  - [SQLite3](https://www.sqlite.org/download.html) (for better-sqlite3)
+  - [ffmpeg](https://ffmpeg.org/download.html) (for fluent-ffmpeg)
+  - (for future) g++ (for tensorflow.js)
+  - On Linux, simply run 
+    - `sudo apt install node sqlite3 g++ ffmpeg`
+
+- **Install code (just clone this repo)**
+  - `$ git clone https://github.com/mrbrahman/rewind-replay.git`
+
+- **Install dependencies**
+  ```bash
+  $ cd rewind-replay
+  $ npm install
+  ```
+
+- **Start server**
+  ```bash
+  $ node server.mjs`
+  ```
+
+- **Setup Collection**
+
+  Until the UI is available to create collections, use backend. For e.g.
+
+  ```bash
+  $ cat c.json
+  {
+    "collection_name":"Test",
+    "collection_path":"/home/mrbrahman/Projects/test-collection/",
+    "album_type":"FOLDER_ALBUM",
+    "listen_paths":["/home/mrbrahman/Projects/test-collection-new-files/"],
+    "apply_folder_pattern":"yyyy/yyyy-mm-dd",
+    "default_collection":1
+  }
+  
+  $ curl -X POST -H 'Content-Type: application/json' -d @c.json "http://localhost:9000/createNewCollection"
+  ```
+- Wait for indexing to complete
+- Enjoy!
 
 # Architecture
 ## Main
@@ -58,13 +101,5 @@ Currently this project is very much a work-in-progress.
 - sharp for image operations
 - fluent-ffmpeg for video operations
 - exiftool-vendored for metadata read / write
-- github "like" search syntax using search-query-parser
 - Use browser native features (HTML5) to play videos
 
-## Softwares needed pre-installed
-- [SQLite3](https://www.sqlite.org/download.html) (for better-sqlite3)
-- [ffmpeg](https://ffmpeg.org/download.html) (for fluent-ffmpeg)
-- (for future) g++ (for tensorflow.js)
-
-
-Run `sudo apt install sqlite3 g++ ffmpeg` on Linux OS.
