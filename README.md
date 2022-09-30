@@ -23,6 +23,7 @@ Currently this project is very much a work-in-progress.
 
 # Current Features
 - Index media photos, videos and audio
+  - Indexer has the ability to run gather metadata for multiple photos at the same time. See `updateIndexerConcurrency` below
 - Display photos and videos on a responsive, progressive, scrollable grid
 - Search photos based on their metadata
 
@@ -39,9 +40,10 @@ Currently this project is very much a work-in-progress.
 
 **After near future**
 - An acutal form to setup collections
+- Form to update config and save it to persistant storage (file?)
 - Ability to upload photos from device
 - Intelligent scrollbar (folder levels?)
-- Status bar for Indexer
+- Monitor indexer progress
 - Face recognition
 - Object detection (computer vision)
 - Clustering photos on map
@@ -55,10 +57,14 @@ Currently this project is very much a work-in-progress.
   - [ffmpeg](https://ffmpeg.org/download.html) (for fluent-ffmpeg)
   - (for future) g++ (for tensorflow.js)
   - On Linux, simply run 
-    - `sudo apt install node sqlite3 g++ ffmpeg`
+    ```bash
+    sudo apt install node sqlite3 g++ ffmpeg
+    ```
 
 - **Install code (just clone this repo)**
-  - `$ git clone https://github.com/mrbrahman/rewind-replay.git`
+  ```bash
+  $ git clone https://github.com/mrbrahman/rewind-replay.git
+  ```
 
 - **Install dependencies**
   ```bash
@@ -68,12 +74,12 @@ Currently this project is very much a work-in-progress.
 
 - **Start server**
   ```bash
-  $ node server.mjs`
+  $ node server.mjs
   ```
 
-- **Setup Collection**
+- **Setup Collection & Start Indexing**
 
-  Until the UI is available to create collections, use backend. For e.g.
+  Until the UI is available to create collections and auto-start indexing, use REST API. For e.g.
 
   ```bash
   $ cat c.json
@@ -86,9 +92,24 @@ Currently this project is very much a work-in-progress.
     "default_collection":1
   }
   
+  # Create collection
   $ curl -X POST -H 'Content-Type: application/json' -d @c.json "http://localhost:9000/createNewCollection"
+
+  # Verify
+  $ curl -X GET 'http://localhost:9000/getAllCollections' | jq '.'
+  
+  # Start indexing
+  $ curl -X POST 'http://localhost:9000/startIndexingFirstTime?collection_id=1'
+
+  # Monitor progress
+  $ curl -X GET 'http://localhost:9000/getIndexerStatus' | jq '.'
+
+  # If you notice your system resources not fully utilized, you can increase indexer concurrency
+  $ curl -X PUT 'http://localhost:9000/updateIndexerConcurrency/2'
+
   ```
-- Wait for indexing to complete
+- Visit your rewind-replay page `http://localhost:9000`
+- As indexing progresses, you should see photos appear
 - Enjoy!
 
 # Architecture
@@ -96,7 +117,7 @@ Currently this project is very much a work-in-progress.
 - nodejs server
 - SQLite 3 database
 
-## Supporting
+## Supporting tools
 - Sqlite3 provided FTS5 for searches
 - sharp for image operations
 - fluent-ffmpeg for video operations
