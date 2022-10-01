@@ -68,12 +68,6 @@ server.post('/indexCollection/:collection_id', function(req,res){
   res.sendStatus(200);
 });
 
-server.delete('/deleteFromCollection/:uuid', function(req,res){
-  let uuid = req.params.uuid;
-  s.indexer.deleteFromCollection(uuid);
-  res.sendStatus(200);
-});
-
 server.get('/getIndexerStatus', function(req,res){
   res.json(s.indexer.indexerStatus());
 });
@@ -110,6 +104,24 @@ server.post('/updateAlbumName', async function(req,res){
 
   res.json(updates);
 });
+
+server.delete('/deleteFromCollection/:uuid', function(req,res){
+  let uuid = req.params.uuid;
+  s.indexer.deleteFromCollection(uuid);
+  res.sendStatus(200);
+});
+
+// TODO
+// server.delete('/deleteAlbum/:albumName', function(req,res){
+//   let albumName = req.params.albumName;
+//   if(){ // album name is valid
+//     s.indexer.deleteAlbum(albumName);
+//     res.sendStatus(200);
+//   } else {
+//     ???
+//   }
+  
+// })
 
 
 // *****************************************
