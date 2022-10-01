@@ -148,7 +148,7 @@ async function indexFile(collection, sourceFileName, uuid, inPlace){
   console.log(`${sourceFileName} finished in ${performance.now()-fileStart} ms`);
 }
 
-export function deleteFromCollection(uuid){
+export async function deleteFromCollection(uuid){
   let start = performance.now();
   console.log(`DELETE: start to delete for uuid: ${uuid}`);
 
