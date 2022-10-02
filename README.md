@@ -24,7 +24,7 @@ Currently this project is very much a work-in-progress.
 # Current Features
 - Index media photos, videos and audio
   - Indexer has the ability to run gather metadata for multiple photos at the same time. See `updateIndexerConcurrency` below
-  - Indexer can also watch for specific folders for me files, and as new filters become available bring them into the respective collection and index them
+  - Indexer can also watch for specific folders for new files, and as new files become available, bring them into the respective collection and index them
 - Display photos and videos on a responsive, progressive, scrollable grid
 - Search photos based on their metadata
 
