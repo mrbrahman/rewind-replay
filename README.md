@@ -2,6 +2,8 @@
 
 Rewind-Replay is (planned to be) a no frills, self-hosted photos app that helps in organizing and more importantly searching your photos.
 
+![Screenshot](public/assets/Screen-Sizes.jpg)
+
 Currently this project is very much a work-in-progress.
 
 # Philosophy
@@ -27,8 +29,6 @@ Currently this project is very much a work-in-progress.
   - Indexer can also watch specific folders for new files, and as new files become available, bring them into the respective collection and index them
 - Display photos and videos on a responsive, progressive, scrollable grid
 - Search photos based on their metadata
-
-![Screenshot](public/assets/Screen-Sizes.jpg)
 
 # Features TODO
 **Near future**
