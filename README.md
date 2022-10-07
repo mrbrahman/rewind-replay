@@ -6,14 +6,12 @@ Rewind-Replay is (planned to be) a no frills, self-hosted photos app that helps 
 
 Currently this project is very much a work-in-progress.
 
-# Philosophy
-
-1. We don't want to use cloud providers for personal photo collection.
-2. Some of us really care about our media in folders that we have meticulously curated from a long time. With any tool, we want the ability to continue to manage pics in folders.
-3. The single source of truth is the photo itself. (For those who don't know, a photo/video taken by a modern camera/phone not only stores the image/video content, but also some/a lot of metadata about the content). Hence, we want all metadata, including user tags, ML based face / objects labels etc., to go back to the photo, to the extent possible.
-4. In the same vein, we also want the tool to utlize the metadata already existing in the photos (updated by device / other tools).
-5. In other words, we don't want to be locked-down by any one particular tool (including this one!).
-6. Some kind of sensible, not too constrained search is needed, even though it may (will) not be as good as Google.
+# Current Features
+- Index media photos, videos and audio
+  - Indexer has the ability to run and gather metadata for multiple photos at the same time. See `updateIndexerConcurrency` below
+  - Indexer can also watch specific folders for new files, and as new files become available, bring them into the respective collection and index them
+- Display photos and videos on a responsive, progressive, scrollable grid
+- Search photos based on their metadata
 
 
 # Key Terms
@@ -23,12 +21,15 @@ Currently this project is very much a work-in-progress.
 4. **Indexing**: The process of reading media and cataloging metadata to help with search. Also thumbnail generation.
 
 
-# Current Features
-- Index media photos, videos and audio
-  - Indexer has the ability to run and gather metadata for multiple photos at the same time. See `updateIndexerConcurrency` below
-  - Indexer can also watch specific folders for new files, and as new files become available, bring them into the respective collection and index them
-- Display photos and videos on a responsive, progressive, scrollable grid
-- Search photos based on their metadata
+# Philosophy
+
+1. We don't want to use cloud providers for personal photo collection.
+2. Some of us really care about our media in folders that we have meticulously curated from a long time. With any tool, we want the ability to continue to manage pics in folders.
+3. The single source of truth is the photo itself. (For those who don't know, a photo/video taken by a modern camera/phone not only stores the image/video content, but also some/a lot of metadata about the content). Hence, we want all metadata, including user tags, ML based face / objects labels etc., to go back to the photo, to the extent possible.
+4. In the same vein, we also want the tool to utlize the metadata already existing in the photos (updated by device / other tools).
+5. In other words, we don't want to be locked-down by any one particular tool (including this one!).
+6. Some kind of sensible, not too constrained search is needed, even though it may (will) not be as good as Google.
+
 
 # Features TODO
 **Near future**
