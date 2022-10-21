@@ -65,18 +65,18 @@ Currently this project is very much a work-in-progress.
 
 - **Install code (just clone this repo)**
   ```bash
-  $ git clone https://github.com/mrbrahman/rewind-replay.git
+  git clone https://github.com/mrbrahman/rewind-replay.git
   ```
 
 - **Install dependencies**
   ```bash
-  $ cd rewind-replay
-  $ npm install
+  cd rewind-replay
+  npm install
   ```
 
 - **Start server**
   ```bash
-  $ node server.mjs
+  node server.mjs
   ```
 
 - **Setup Collection & Start Indexing**
@@ -84,7 +84,8 @@ Currently this project is very much a work-in-progress.
   Until the UI is available to create collections and auto-start indexing, use REST API. For e.g.
 
   ```bash
-  $ cat c.json
+  # Create collection
+  cat > c.json <<EOF
   {
     "collection_name":"Test",
     "collection_path":"/home/mrbrahman/Projects/test-collection/",
@@ -93,24 +94,29 @@ Currently this project is very much a work-in-progress.
     "apply_folder_pattern":"yyyy/yyyy-mm-dd",
     "default_collection":1
   }
+  EOF
   
-  # Create collection
-  $ curl -X POST -H 'Content-Type: application/json' -d @c.json "http://localhost:9000/createNewCollection"
-
+  curl -X POST -H 'Content-Type: application/json' -d @c.json "http://localhost:9000/createNewCollection"
+  
   # Verify
-  $ curl -X GET 'http://localhost:9000/getAllCollections' | jq '.'
-  
-  # Start indexing
-  $ curl -X POST 'http://localhost:9000/startIndexingFirstTime?collection_id=1'
+  curl -X GET 'http://localhost:9000/getAllCollections' | jq '.'
+  ```
+
+  ```bash
+  # Start indexing (this will kick off indexer process in the background and return immediately)
+  curl -X POST 'http://localhost:9000/startIndexingFirstTime?collection_id=1'
 
   # Monitor progress
-  $ curl -X GET 'http://localhost:9000/getIndexerStatus' | jq '.'
+  curl -X GET 'http://localhost:9000/getIndexerStatus' | jq '.'
+  ```
 
-  # If you notice your system resources not fully utilized, you can increase indexer concurrency
+  ```bash
+  # If you notice your system resources are not fully utilized, you can increase indexer concurrency
+  # Suggest to increase by 1 at a time, until you see resources getting fully utilized
   $ curl -X PUT 'http://localhost:9000/updateIndexerConcurrency/2'
 
   ```
-- Visit your rewind-replay page `http://localhost:9000`
+- Visit your rewind-replay page http://localhost:9000
 - As indexing progresses, you should see photos appear
 - Enjoy!
 
