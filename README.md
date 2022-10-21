@@ -6,21 +6,6 @@ Rewind-Replay is (planned to be) a no frills, self-hosted photos app that helps 
 
 Currently this project is very much a work-in-progress.
 
-# Current Features
-- Index media photos, videos and audio
-  - Indexer has the ability to run and gather metadata for multiple photos at the same time. See `updateIndexerConcurrency` below
-  - Indexer can also watch specific folders for new files, and as new files become available, bring them into the respective collection and index them
-- Display photos and videos on a responsive, progressive, scrollable grid
-- Search photos based on their metadata
-
-
-# Key Terms
-1. **Photo / Video**: The individual photo / video (duh!)
-2. **Album**: A group of related photos (and videos). For e.g. "2021-10-01 Trip to SVBF"
-3. **Collection**: A set of related albums. For e.g. "My family pics", "My small-business pics" etc.
-4. **Indexing**: The process of reading media and cataloging metadata to help with search. Also thumbnail generation.
-
-
 # Philosophy
 
 1. We don't want to use cloud providers for personal photo collection.
@@ -29,6 +14,19 @@ Currently this project is very much a work-in-progress.
 4. In the same vein, we also want the tool to utlize the metadata already existing in the photos (updated by device / other tools).
 5. In other words, we don't want to be locked-down by any one particular tool (including this one!).
 6. Some kind of sensible, not too constrained search is needed, even though it may (will) not be as good as Google.
+
+# Key Terms
+1. **Photo / Video**: The individual photo / video (duh!)
+2. **Album**: A group of related photos (and videos). For e.g. "2021-10-01 Trip to SVBF"
+3. **Collection**: A set of related albums. For e.g. "My family pics", "My small-business pics" etc.
+4. **Indexing**: The process of reading media and cataloging metadata to help with search. Also thumbnail generation.
+
+# Current Features
+- Index media photos, videos and audio
+  - Indexer has the ability to run and gather metadata for multiple photos at the same time. See `updateIndexerConcurrency` below
+  - Indexer can also watch specific folders for new files, and as new files become available, bring them into the respective collection and index them
+- Display photos and videos on a responsive, progressive, scrollable grid
+- Search photos based on their metadata
 
 
 # Features TODO
@@ -51,7 +49,7 @@ Currently this project is very much a work-in-progress.
 - Clustering photos on map
 - PWA
 
-# How to install
+# How to install & use
 
 - **Install necessary software**
   - [Node](https://nodejs.org/en/) (to run the server)
@@ -67,8 +65,9 @@ Currently this project is very much a work-in-progress.
   ```bash
   git clone https://github.com/mrbrahman/rewind-replay.git
   ```
+  Or, grab the latest release from the [Releases](https://github.com/mrbrahman/rewind-replay/releases) page
 
-- **Install dependencies**
+- **Install node dependencies**
   ```bash
   cd rewind-replay
   npm install
