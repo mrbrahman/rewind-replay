@@ -12,9 +12,7 @@ const router = new Navigo('/', {hash: true});
 router.on('/', function(){
   fetch('/getAll').then(response=>response.json())
     .then(result=>{
-      // window.result = result;
-      console.log(`got ${result.length} albums`)
-      s.photogrid.paintPhotoGrid(result)
+      s.photogrid.paintPhotoGrid(result);
     })
   ;
 })
@@ -53,9 +51,7 @@ router.on('/search/:searchText', function({data}){
   })
   .then(response=>response.json())
   .then(result=>{
-    // window.result = result;
-    console.log(`got ${result.length} albums`)
-    s.photogrid.paintPhotoGrid(result)    
+    s.photogrid.paintPhotoGrid(result);
   })
 });
 

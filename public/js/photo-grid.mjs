@@ -66,7 +66,9 @@ export function paintPhotoGrid(media){
   // we have the data, paint the grid
   var pig = new Pig(media, pigOptions)
   pig.enable();
+  
   notify(`Found ${media.length.toLocaleString()} albums containing ${media.map(x=>x.images.length).reduce((a,c)=>a+c).toLocaleString()} items`, 'primary', 'info-circle', 5000);
+  console.log(`Found ${media.length.toLocaleString()} albums`);
 
   // handle album name changes
   // add a listener to the pig parent div
