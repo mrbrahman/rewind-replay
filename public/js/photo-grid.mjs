@@ -15,7 +15,31 @@ let pigOptions = {
   newRowPerGroup: true
 };
 
+// Always escape HTML for text arguments!
+function escapeHtml(html) {
+  const div = document.createElement('div');
+  div.textContent = html;
+  return div.innerHTML;
+}
+
+// Custom function to emit toast notifications
+function notify(message, variant = 'primary', icon = 'info-circle', duration = 3000) {
+  const alert = Object.assign(document.createElement('sl-alert'), {
+    variant,
+    closable: true,
+    duration: duration,
+    innerHTML: `
+      <sl-icon name="${icon}" slot="icon"></sl-icon>
+      ${escapeHtml(message)}
+    `
+  });
+
+  document.body.append(alert);
+  return alert.toast();
+}
+
 export function paintPhotoGrid(media){
+  // window.result = media;
   // get main content
   let mainContent = document.getElementById('main-content');
 
@@ -35,12 +59,14 @@ export function paintPhotoGrid(media){
 
   if(media.length == 0){
     pigDiv.textContent = 'No results found...'
+    notify(`No results found`, 'warning', 'exclamation-triangle', 2000);
     return;
   }
   
   // we have the data, paint the grid
   var pig = new Pig(media, pigOptions)
   pig.enable();
+  notify(`Found ${media.length.toLocaleString()} albums containing ${media.map(x=>x.images.length).reduce((a,c)=>a+c).toLocaleString()} items`, 'primary', 'info-circle', 5000);
 
   // handle album name changes
   // add a listener to the pig parent div
