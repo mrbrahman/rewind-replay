@@ -1,5 +1,7 @@
 // import {} from './lib/pig.js';
 
+import {notify} from './utils.mjs';
+
 let pigOptions = {
   scroller: document.getElementById("main-content"),
   spaceBetweenImages: 4,
@@ -14,29 +16,6 @@ let pigOptions = {
   },
   newRowPerGroup: true
 };
-
-// Always escape HTML for text arguments!
-function escapeHtml(html) {
-  const div = document.createElement('div');
-  div.textContent = html;
-  return div.innerHTML;
-}
-
-// Custom function to emit toast notifications
-function notify(message, variant = 'primary', icon = 'info-circle', duration = 3000) {
-  const alert = Object.assign(document.createElement('sl-alert'), {
-    variant,
-    closable: true,
-    duration: duration,
-    innerHTML: `
-      <sl-icon name="${icon}" slot="icon"></sl-icon>
-      ${escapeHtml(message)}
-    `
-  });
-
-  document.body.append(alert);
-  return alert.toast();
-}
 
 export function paintPhotoGrid(media){
   // window.result = media;
