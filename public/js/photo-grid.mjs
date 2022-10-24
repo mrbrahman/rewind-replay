@@ -1,6 +1,7 @@
-// import Pig from './lib/pig.mjs';
+// import {} from './lib/pig.js';
 
 let pigOptions = {
+  scroller: document.getElementById("main-content"),
   spaceBetweenImages: 4,
   urlForSize: function(filename, size) {
     return `/getThumbnail?uuid=${filename}&height=${size}`
@@ -28,7 +29,6 @@ export function paintPhotoGrid(media){
   // add pig
   let pigDiv = document.createElement('div');
   pigDiv.id = 'pig';
-  pigDiv.className = 'w3-container';
 
   pigWrapper.appendChild(pigDiv);
   mainContent.appendChild(pigWrapper);

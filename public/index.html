@@ -1,34 +1,135 @@
 <!DOCTYPE html>
-
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
   <title>Rewind, Replay</title>
   <link rel="icon" type="image/x-icon" href="assets/R3-resized.png">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="css/w3.css">
-  <link rel="stylesheet" href="css/style.css">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/themes/light.css" />
+  <script type="module" data-shoelace="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist"></script>
+
+  <style>
+    body, h1, h2, h3, h4, h5, h6 {
+      font-family: -apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    }
+    body {
+      overflow-y: hidden;
+      margin: 0px;
+      padding: 0px;
+    }
+
+    #app {
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: 60px 1fr;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    #nav-header {
+      display: flex;
+      align-items: center;
+      padding: 10px 0 10px 0;
+      background-color: white;
+    }
+    #nav-header > .nav-item {
+      padding: 0 10px 0 10px;
+    }
+    #nav-header > #nav-search-box {
+      flex-grow: 1;
+    }
+    #nav-header > #nav-title {
+      font-weight: bold;
+    }
+
+    @media(max-width: 601px) {
+      #nav-header > #nav-title {display: none}
+    }
+
+    #main-content {
+      overflow-y: scroll;
+      margin: 0px 5px 0px 4px;
+    }
+
+    /* TODO: in r3-photo-grallery component*/
+    /* .gallery {
+      position: relative;
+    }
+    .group {
+      width: 100%;
+      position: absolute;
+      background-color: coral;
+    }
+    .album-name {
+      position: sticky;
+      top: 0px;
+      background-color: aqua;
+      height: 55px;
+      margin: 0px;
+    }
+    .photo {
+      background-color: antiquewhite;
+    } */
+
+    .pig-group {
+      margin-bottom: 15px;
+    }
+    .albumName {
+      display: inline-block;
+      font-weight: bold;
+    }
+
+    [contenteditable] {
+      padding: .25em 0em;
+      /* margin: 1em 0; */
+      transition: padding .3s ease-in-out;
+    }
+
+    [contenteditable]:hover,
+    [contenteditable]:focus {
+      padding: .25em;
+    }
+
+    [contenteditable]:hover {
+      background: #fafafa;
+      outline: 2px solid #eee;
+    }
+
+    [contenteditable]:focus {
+      background: #efefef;
+      outline: 2px solid green;
+    }
+  </style>
 </head>
-
 <body>
+  <div id="app">
 
-  <div id="app-content" class="">
-    <div id="header" class="w3-bar w3-white w3-border-top w3-border-bottom w3-top">
-      <a href="/" data-navigo><img id="logo" class="home w3-bar-item"src="assets/R3-resized.png" alt="Relive!"></a>
-      <a href="/" data-navigo><div id="title" class="home w3-bar-item">Rewind,Replay Relive!</div></a>
+    <!-- Navigation Header -->
+    <nav id="nav-header">
+      <a class="nav-item" id="nav-logo" href="/" data-navigo>
+        <img id="logo" src="assets/R3-resized.png" alt="Relive!">
+      </a>
 
-      <input id="search-box" type="search" class="w3-bar-item w3-input w3-border w3-round-large w3-light-grey w3-third" type="text" id="search" name="search" size="150" placeholder="Search your memories...">
-      
-      <button id="search-button" class="w3-bar-item w3-button w3-round-large w3-grey" style="margin-left:10px">Search</button>
+      <a class="nav-item" id="nav-title" href="/" data-navigo>
+        Rewind, Replay & Relive!
+      </a>
 
-      <div title="Settings" class="w3-bar-item w3-large w3-circle w3-button w3-right"><span>&#9881;</span></div>
-    </div>
+      <sl-input class="nav-item" id="nav-search-box" clearable pill type="search" enterkeyhint="search" placeholder="Search your memories...">
+        <sl-icon name="search" slot="prefix"></sl-icon>
+      </sl-input>
 
-    <div id="main-content">
-    </div>
+      <sl-icon-button class="nav-item" id="nav-settings" name="gear" label="Settings"></sl-icon-button>
+    </nav>
+    
+    <!-- Placeholder for dynamic main content -->
+    <div id="main-content"></div>
+
   </div>
-
-  <script src="https://unpkg.com/navigo" type="module"></script>
   <script src="js/lib/pig.js"></script>
   <script src="js/main.mjs" type="module"></script>
 
 </body>
-
+</html>

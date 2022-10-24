@@ -1,3 +1,9 @@
+import 'https://unpkg.com/navigo';
+
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/input/input.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/icon/icon.js';
+import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/icon-button/icon-button.js';
+
 import * as s from './services.mjs';
 
 const router = new Navigo('/', {hash: true});
@@ -13,15 +19,12 @@ router.on('/', function(){
 })
 
 // found at https://tutorial.eyehunts.com/js/call-javascript-function-on-enter-keypress-in-the-textbox-example-code/
-let searchBox = document.getElementById("search-box");
+let searchBox = document.getElementById("nav-search-box");
 searchBox.addEventListener("keyup", function (e) {
  if (e.key === "Enter") {  
   performSearch()
  }
 });
-
-let searchButton = document.getElementById("search-button");
-searchButton.addEventListener("click", performSearch);
 
 // full list: https://en.wikipedia.org/wiki/Percent-encoding#Percent-encoding_reserved_characters
 function escapeHTML(str){
@@ -31,7 +34,7 @@ function escapeHTML(str){
 }
 
 function performSearch(){
-  let searchText = document.getElementById("search-box").value;
+  let searchText = document.getElementById("nav-search-box").value;
   if(!searchText){
     alert("Enter search text");
     return;
