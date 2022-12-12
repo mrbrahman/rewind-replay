@@ -22,9 +22,13 @@ server.get('/getAll', function(req,res){
 });
 
 server.get('/getThumbnail', function(req,res){
-  let {uuid, height} = req.query;
+  let uuid = req.query.uuid, height = +req.query.height;
+
+  // TODO: get the list of sizes from indexer / thumbnail generator
+  let thumbHeight = [100, 250, 500].filter(x=> x >= height)[0];
+
   // console.log(`inputs: uuid ${uuid} height ${height}`)
-  let fileName = path.join(config.thumbsDir, ...Array.from(uuid).slice(0,3), `${uuid}_${height}_fit.jpg`);
+  let fileName = path.join(config.thumbsDir, ...Array.from(uuid).slice(0,3), `${uuid}_${thumbHeight}_fit.jpg`);
   // console.log(`getting thumbnail: ${fileName}`)
   res.sendFile(fileName, {root: '.'});
 });

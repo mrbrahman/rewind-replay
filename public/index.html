@@ -9,7 +9,8 @@
   <link rel="icon" type="image/x-icon" href="assets/R3-resized.png">
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/themes/light.css" />
-  <script type="module" data-shoelace="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist"></script>
+  <!-- <script type="module" data-shoelace="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist"></script> -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/shoelace.js"></script>
 
   <style>
     body, h1, h2, h3, h4, h5, h6 {
@@ -54,55 +55,323 @@
       margin: 0px 5px 0px 4px;
     }
 
-    /* TODO: in r3-photo-grallery component*/
-    /* .gallery {
-      position: relative;
-    }
-    .group {
-      width: 100%;
-      position: absolute;
-      background-color: coral;
-    }
-    .album-name {
-      position: sticky;
-      top: 0px;
-      background-color: aqua;
-      height: 55px;
-      margin: 0px;
-    }
-    .photo {
-      background-color: antiquewhite;
-    } */
-
-    .pig-group {
-      margin-bottom: 15px;
-    }
-    .albumName {
-      display: inline-block;
-      font-weight: bold;
-    }
-
-    [contenteditable] {
-      padding: .25em 0em;
-      /* margin: 1em 0; */
-      transition: padding .3s ease-in-out;
-    }
-
-    [contenteditable]:hover,
-    [contenteditable]:focus {
-      padding: .25em;
-    }
-
-    [contenteditable]:hover {
-      background: #fafafa;
-      outline: 2px solid #eee;
-    }
-
-    [contenteditable]:focus {
-      background: #efefef;
-      outline: 2px solid green;
-    }
   </style>
+
+  <!-- many web component practices adapted from: https://dev.to/dannyengelman/web-component-102-the-5-lessons-after-learning-web-components-101-h9p -->
+
+  <template id='PL-THUMB'>
+    <!-- checkbox css heavily borrowed from https://stackoverflow.com/a/30663705/8098748   -->
+    <style>
+      #container {
+        position: relative;
+        background-color: whitesmoke;
+        /* height: 250px; */
+        /* width: 400px; */
+        /* display: block; */
+        transition: all 0.3s ease-in-out;
+      }
+
+      img {
+        /* position: absolute; */
+        /* top: 0px; */
+        /* left: 0px; */
+        background-color: darkgrey;
+        max-width: 100%;
+        max-height: 100%;
+        box-sizing: border-box;
+        /* border: solid 0px; */
+        transition: all 0.3s ease-in-out;
+        /* transform-origin: 50% 50%; */
+        /* display: block; */
+        cursor: pointer;
+        visibility: hidden;
+      }
+      
+      img.ready {
+        visibility: visible;
+        animation: 0.4s lodingfeel cubic-bezier(1,0,1,.08);
+      }
+      @keyframes lodingfeel {
+        from {
+          filter: blur(15px);
+        }
+        to {
+          filter: blur(0);
+        }
+      }
+      
+      sl-rating {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        --symbol-size: 1rem;
+        --symbol-spacing: 1px;
+      }
+
+      sl-icon-button[name="trash"] {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        font-size: 1.5rem;
+      }
+
+      sl-icon-button[name="trash"]::part(base) {
+        color: #dfdeda;
+      }
+
+      input[type="checkbox"] {
+        display: none;
+      }
+
+      label:before {
+        background-color: none;
+        color: white;
+        content: " ";
+        display: block;
+        border-radius: 50%;
+        border: 3px solid grey;
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        width: 25px;
+        height: 25px;
+        text-align: center;
+        line-height: 28px;
+        transition-duration: 0.3s;
+        z-index: 1;
+        pointer-events: auto;
+        cursor: pointer;
+        /*   transform: scale(0); */
+      }
+
+      /* :checked ~ img {
+        border-color: #ddd;
+      } */
+      :checked + label:before {
+        content: "✓";
+        background-color: #66b3ff;
+        transform: scale(1.5);
+      }
+
+      :checked ~ img {
+        transform: scale(0.85);
+        box-shadow: 0 0 5px #333;
+        z-index: -1;
+      }
+    </style>
+
+    <div id="container">
+      <!--  rest of the template is updated in the connectedCallback method -->
+    </div>
+    
+  </template>
+
+  <template id='PL-ALBUM'>
+    <style>
+      #container {
+        position: relative;
+      }
+
+      pl-album-name {
+        margin: 0 0 0 4px;
+        /* make it stick to the top as long as album is visible */
+        position: sticky;
+        top: 0px;
+      }
+      
+      pl-thumb {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        transition: transform 0.3s;
+      }
+
+    </style>
+    <div id="container">
+    </div>
+  </template>
+
+  <template id="PL-ALBUM-NAME">
+    <style>
+      :host {
+        /* height: 50px; */
+        display: grid;
+        grid-template-rows: 1fr;
+        grid-template-columns: auto 1fr auto;
+        /* grid-column-gap: 1px; */
+        align-items: center;
+        background-color: white;
+        z-index: 1;
+        /* "auto" does not transition yet 
+          see 
+          https://codepen.io/matuzo/post/animating-css-grid-layout-properties
+          https://nemzes.net/posts/animating-height-auto/
+          https://css-tricks.com/using-css-transitions-auto-dimensions/ and 
+          https://n12v.com/css-transition-to-from-auto/
+        
+          however, for whatever reason, the max-width / grid-workaround also did not work here as expected 
+          need to debug some other day. Until then there is no transition/animation :-/  
+        */
+        transition: all 0.3s;
+      }
+      
+      #album-name {
+        font-size: 1.1rem;
+        margin: auto;
+        padding: 0.5rem 0 0.5rem 0;
+        font-weight: bolder;
+        /* overflow-y: scroll; */ 
+        /* TODO: overflow does not work without height, and  
+          specifying height is messing up with verticle alignment
+        */
+        margin: 0 5px 0 5px;
+        border-radius: 5px;
+      }
+
+      #album-name:hover {
+        cursor: text;
+        background: #fafafa;
+        outline: 2px solid #eee;
+      }
+
+      #album-name:focus {
+        background: #efefef;
+        outline: 2px solid green;
+        transition: all 0.3s; /* want transition to happen only during focus, and not hover */
+      }
+
+      sl-icon {
+        font-size: 1.5rem;
+      }
+
+      #select-all {
+        /* visibility: hidden; */ /* cannot transition, hence showing always*/
+        font-size: 1.5rem;
+        transition: transform 0.3s;
+      }
+
+      .select-all {
+        color: #66b3ff;
+        transform: scale(1.5);
+      }
+      .select-some {
+        color: grey;
+        transform: scale(1.5);
+      }
+      .select-none {
+        color: grey;
+      }
+
+      #edit-controls {
+        visibility: hidden;
+        cursor: pointer;
+      }
+
+      #save {
+        color: green;
+      }
+      #cancel {
+        color: darkred;
+        margin-right: 5px;
+      }
+
+    </style>
+
+    <!-- tooltip is sticking badly on mobile -->
+    <!-- <sl-tooltip content="Toggle Select All" hoist> -->
+      <sl-icon id="select-all" class="select-none" name="check-circle"></sl-icon>
+    <!-- </sl-tooltip> -->
+
+    <div id="album-name" contenteditable role="textbox"></div>
+    
+    <div id="edit-controls">
+      <sl-icon id="save" name="check-circle-fill"></sl-icon>
+      <sl-icon id="cancel" name="x-circle-fill"></sl-icon>
+    </div>
+  </template>
+
+  <template id="PL-GALLERY">
+    <style>
+      #gallery {
+        position: relative;
+        overflow-y: scroll;
+        height: 100%;
+      }
+
+      pl-album {
+        width: 100%;
+        position: absolute;
+        transition: top 0.3s;
+      }
+
+      pl-gallery-controls {
+        position: sticky;
+        top: 0%;
+        transition: top 0.4s;
+      }
+
+    </style>
+    <div id="gallery"></div>
+  </template>
+
+  <template id="PL-GALLERY-CONTROLS">
+    <style>
+      #container {
+        display: grid;
+        height: 65px;
+        grid-template-rows: 1fr;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        box-shadow: 0 0 5px #333;
+        background-color: white;
+      }
+
+      .col {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+      }
+      #col1 {
+        justify-content: flex-start;
+      }
+      #col2 {
+        justify-content: flex-end;
+      }
+      #col1 > * {
+        padding-left: 10px;
+      }
+      #col2 > * {
+        padding-right: 10px;
+      }
+
+      sl-rating {
+        --symbol-size: 1.25rem;
+      }
+
+      sl-icon-button {
+        font-size: 1.25rem;
+      }
+      
+    </style>
+
+    <div id="container">
+      <div class="col" id="col1">
+        <sl-icon-button name="x-lg" id="close"></sl-icon-button>
+        <div id="ctr"></div>
+      </div>
+      
+      <div class="col" id="col2">
+        <sl-rating id="rating"></sl-rating>
+        <sl-icon-button name="tags-fill">Keywords</sl-icon-button>
+        <sl-icon-button id="delete" name="trash-fill">Delete</sl-icon-button>
+        <sl-icon-button name="file-code-fill">Organize</sl-icon-button> <!-- this will be dropdown -->
+        <sl-icon-button name="download">Download</sl-icon-button>
+        <!-- do I need the 3 dots for additional stuff? -->
+        <!-- <sl-icon-button name="three-dots-vertical">More Options</sl-icon-button> -->
+      </div>
+    </div>
+  </template>
+
 </head>
 <body>
   <div id="app">

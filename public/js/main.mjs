@@ -1,18 +1,25 @@
 import 'https://unpkg.com/navigo';
 
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/input/input.js';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/icon/icon.js';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/icon-button/icon-button.js';
-import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/alert/alert.js';
+// import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.86/dist/components/rating/rating.js';
+// import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/input/input.js';
+// import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/icon/icon.js';
+// import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/icon-button/icon-button.js';
+// import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/alert/alert.js';
 
-import * as s from './services.mjs';
+import './pl-thumb.js';
+import './pl-album.js';
+import './pl-album-name.js';
+import './pl-gallery.js';
+import './pl-gallery-controls.js';
+
+import {notify} from './utils.mjs';
 
 const router = new Navigo('/', {hash: true});
 
 router.on('/', function(){
   fetch('/getAll').then(response=>response.json())
     .then(result=>{
-      s.photogrid.paintPhotoGrid(result);
+      showGallery(result);
     })
   ;
 })
@@ -51,8 +58,22 @@ router.on('/search/:searchText', function({data}){
   })
   .then(response=>response.json())
   .then(result=>{
-    s.photogrid.paintPhotoGrid(result);
+    showGallery(result);
   })
 });
 
 router.resolve();
+
+function showGallery(data){
+  // notify(`Found ${data.length.toLocaleString()} albums containing ${data.map(x=>x.items.length).reduce((a,c)=>a+c).toLocaleString()} items`);
+  let c = document.getElementById('main-content');
+  if(data.length == 0){
+    c.innerHTML = "No results found";
+    return;
+  }
+
+  let g = Object.assign(document.createElement('pl-gallery'), { data });
+  
+  c.innerHTML = "";
+  c.appendChild(g);
+}
