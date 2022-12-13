@@ -65,15 +65,16 @@ router.on('/search/:searchText', function({data}){
 router.resolve();
 
 function showGallery(data){
-  // notify(`Found ${data.length.toLocaleString()} albums containing ${data.map(x=>x.items.length).reduce((a,c)=>a+c).toLocaleString()} items`);
   let c = document.getElementById('main-content');
   if(data.length == 0){
     c.innerHTML = "No results found";
     return;
   }
-
+  
   let g = Object.assign(document.createElement('pl-gallery'), { data });
   
   c.innerHTML = "";
   c.appendChild(g);
+
+  notify(`Found ${data.length.toLocaleString()} albums containing ${data.map(x=>x.items.length).reduce((a,c)=>a+c).toLocaleString()} items`);
 }
