@@ -240,6 +240,13 @@ class PlAlbum extends HTMLElement {
     let i = this.data.length;
     while(i--){
       if((this.data[i].elem && this.data[i].elem.selected) || this.data[i].layout.selected){
+        
+        // delete from backend
+        fetch(`/deleteFromCollection/${this.data[i].layout.id}`, {
+          method: 'DELETE',
+        });
+
+        // remove from album
         this.#deleteItem(i, false);
         deletedCnt++;
       }

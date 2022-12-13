@@ -113,7 +113,10 @@ class PlThumb extends HTMLElement {
   
   #itemDeleted = (evt)=>{
     console.log('TODO Delete from server/db here for id '+this.id);
-
+    fetch(`/deleteFromCollection/${this.id}`, {
+      method: 'DELETE',
+    });
+    
     const deleteEvent = new CustomEvent('r3-item-deleted');
     this.dispatchEvent(deleteEvent);
   }
