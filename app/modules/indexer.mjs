@@ -4,6 +4,7 @@ import {EOL} from 'os';
 import {EventEmitter} from 'events';
 
 import {v4 as uuidv4} from 'uuid';
+import dateFormat from 'dateformat';
 
 import * as collections from './collections.mjs';
 import * as m from './helpers/metadata.mjs';
@@ -228,4 +229,28 @@ export async function updateAlbum(collection_id, fromAlbum, toAlbum){
     collection_id, fromAlbum, toAlbum, 
     c.album_type=="FOLDER_ALBUM" ? true : false  // whether to update file name
   );
+}
+
+export let ignoreWatcherList = {};
+
+// TODO: need to think of a generic function for other metadata as well
+export async function updateRating(uuid, newRating){
+  let fileName = db.getFileName(uuid);
+
+  // make an entry to the ignore watcher list so that chokidar can ignore
+  // the 'change' it sees on this file.
+  ignoreWatcherList[fileName] = true;
+
+  // we also update the file modify date so that next time server starts up, it doesn't
+  // see this as a new file and re-indexes it
+  let fileModifyDate = dateFormat(new Date(), 'isoDateTime');
+
+  try{
+    await m.updateMetadata(fileName, {Rating: newRating, FileModifyDate: fileModifyDate});
+  } catch(err){
+    throw err.message;
+  }
+
+  db.updateRating(uuid, newRating, fileModifyDate);
+
 }

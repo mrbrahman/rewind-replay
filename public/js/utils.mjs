@@ -5,17 +5,23 @@ function escapeHtml(html) {
   return div.innerHTML;
 }
 
+// TODO: standardize this for info, warnings, errors etc.
+
 // Custom function to emit toast notifications
 export function notify(message, variant = 'primary', icon = 'info-circle', duration = 3000) {
   const alert = Object.assign(document.createElement('sl-alert'), {
     variant,
     closable: true,
-    duration: duration,
     innerHTML: `
       <sl-icon name="${icon}" slot="icon"></sl-icon>
-      ${escapeHtml(message)}
+      ${message}
     `
   });
+
+  // for errors, we don't want auto close
+  if(duration > 0){
+    alert.duration = duration;
+  }
 
   document.body.append(alert);
   return alert.toast();

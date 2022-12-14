@@ -38,7 +38,7 @@ export async function getMetadata(file){
     faces: tags.RegionInfo ? tags.RegionInfo.RegionList.filter(d=>d.Type='Face').map(d=>d.Name) : null,
     objects: tags.RegionInfo ? tags.RegionInfo.RegionList.filter(d=>d.Type!='Face').map(d=>d.Name) : null,
     xmpregion: tags.RegionInfo,
-    rating: tags.Rating||null,
+    rating: tags.Rating||0,
     imagesize: tags.ImageSize||null,
     ImageWidth: tags.ImageWidth||null,   // not sent to db
     ImageHeight: tags.ImageHeight||null, // not sent to db
@@ -63,4 +63,12 @@ export async function getMetadata(file){
     file_modify_date: tags.FileModifyDate ? tags.FileModifyDate.toString() : null,
     file_date: tags.DateTimeOriginal ? tags.DateTimeOriginal.toString() : (tags.CreateDate ? tags.CreateDate.toString() : (tags.FileModifyDate.toString() ))
   }
+}
+
+export async function updateMetadata(file, updates){
+  // TODO: provide -overwrite_original as an option
+  // Design a slower but safer write mechanism where the original is compared with the modified
+  // (both image and metadata) and the only diffs should be the updates
+
+  await exiftool.write(file, updates, ['-overwrite_original']);
 }

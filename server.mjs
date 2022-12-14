@@ -7,7 +7,7 @@ import * as s from './app/services.mjs'
 
 const server = express();
 
-server.use(express.json())
+server.use(express.json());
 server.use(express.static('public'));
 
 // TODO: validate request parameters in all relevant functions?
@@ -98,6 +98,17 @@ server.put('/updateIndexerConcurrency/:concurrency', function(req,res,next){
   }
   res.sendStatus(200);
 });
+
+server.put('/updateRating', async function(req,res,next){
+  let {uuid, newRating} = req.query;
+  try{
+    await s.indexer.updateRating(uuid, newRating);
+  } catch(err){
+    res.status(500).json({error: err});
+    return;
+  }
+  res.sendStatus(200);
+})
 
 // *****************************************
 // album organization

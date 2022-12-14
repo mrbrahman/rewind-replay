@@ -1,3 +1,5 @@
+import {notify} from './utils.mjs';
+
 class PlThumb extends HTMLElement {
   // instance variables
   #width; #height; #rating=0; #selected=false;
@@ -54,13 +56,10 @@ class PlThumb extends HTMLElement {
   }
   
   disconnectedCallback() {
-    // TODO: can we check if the listner is setup before removing?
-    // TODO: also check if we need to remove these listeners explicitly, since we're removing the 
-    // shadow DOM anyway, and the listeners should get automatically removed by browser
-    
-    this.shadowRoot.querySelector('input[type="checkbox"]').removeEventListener('click', this.#handleSelection);
-    this.shadowRoot.querySelector('sl-rating').removeEventListener('sl-change', this.#slRatingChanged);
-    this.shadowRoot.querySelector('sl-icon-button[name="trash"]').removeEventListener('click', this.#itemDeleted);
+    // We're not adding listeners outside of this component
+    // Hence no need to remove anything
+    // After the component is removed, there is nothing to select on to remove listeners
+    // They will just be garbage collected
   }
   
   #paintRest(){
@@ -88,14 +87,8 @@ class PlThumb extends HTMLElement {
     this.shadowRoot.querySelector('input[type="checkbox"]')
       .addEventListener('click', this.#handleSelection)
     ;
-    
-    this.shadowRoot.querySelector('sl-rating')
-      .addEventListener('sl-change', this.#slRatingChanged)
-    ;
-    
-    this.shadowRoot.querySelector('sl-icon-button[name="trash"]')
-      .addEventListener('click', this.#itemDeleted)
-    ;
+
+    // event listeners for rating ang trash will be added during paintSelect
     
   }
 
@@ -106,13 +99,47 @@ class PlThumb extends HTMLElement {
   }
 
   #slRatingChanged = (evt)=>{
-    let r = evt.target.value;
-    console.log(`TODO: new value: ${r} to be updated in db`);
-    this.#rating = r;
+    let oldRating = this.#rating;
+    let newRating = evt.target.value;
+
+    // https://jasonwatmore.com/post/2021/10/09/fetch-error-handling-for-failed-http-responses-and-network-errors
+    fetch(`updateRating?uuid=${this.id}&newRating=${newRating}`, {method: "PUT"})
+      .then(async (res)=>{
+        let isJson = res.headers.get('content-type')?.includes('application/json');
+        let output = isJson ? await res.json() : null;
+
+        if(!res.ok){
+          return Promise.reject(output.error || res.status+':'+res.statusText)
+        }
+        this.rating = newRating;
+        console.log('updated rating in backend');
+      })
+      .catch(err=>{
+        // using the setter here, since we need to paint the rating back to original value
+        // but we don't want that change to fire an event, hence disable event listener first
+        // and re-enable after the change is made
+        this.#removeRatingListener();
+        this.rating = oldRating;
+        // for some reason, if event listener is added without a delay, it is firing again
+        // due to the rating change to oldRating
+        setTimeout(() => {
+          this.#addRatingListener();
+        }, 1000);
+        
+        notify(`<strong>Error</strong>:</br>${err}`, 'danger', 'exclamation-octagon', -1);
+        
+      })
   }
+
+  #addRatingListener = ()=> this.shadowRoot.querySelector('sl-rating')
+    .addEventListener('sl-change', this.#slRatingChanged)
+  ;
+
+  #removeRatingListener = ()=> this.shadowRoot.querySelector('sl-rating')
+    .removeEventListener('sl-change', this.#slRatingChanged)
+  ;  
   
   #itemDeleted = (evt)=>{
-    console.log('TODO Delete from server/db here for id '+this.id);
     fetch(`/deleteFromCollection/${this.id}`, {
       method: 'DELETE',
     });
@@ -175,18 +202,14 @@ class PlThumb extends HTMLElement {
     // enable/disable listeners to update individually
     if(this.selected){
       // disable
-      this.shadowRoot.querySelector('sl-rating')
-        .removeEventListener('sl-change', this.#slRatingChanged)
-      ;
+      this.#removeRatingListener();
     
       this.shadowRoot.querySelector('sl-icon-button[name="trash"]')
         .removeEventListener('click', this.#itemDeleted)
       ;
     } else {
       // enable
-      this.shadowRoot.querySelector('sl-rating')
-        .addEventListener('sl-change', this.#slRatingChanged)
-      ;
+      this.#addRatingListener();
     
       this.shadowRoot.querySelector('sl-icon-button[name="trash"]')
         .addEventListener('click', this.#itemDeleted)
