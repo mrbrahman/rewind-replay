@@ -248,6 +248,9 @@ export async function updateRating(uuid, newRating){
   try{
     await m.updateMetadata(fileName, {Rating: newRating, FileModifyDate: fileModifyDate});
   } catch(err){
+    // updates to metadata wasn't successful
+    // remove file from ignore list and throw error
+    delete(ignoreWatcherList[fileName]);
     throw err.message;
   }
 
