@@ -111,7 +111,8 @@ class PlThumb extends HTMLElement {
         if(!res.ok){
           return Promise.reject(output.error || res.status+':'+res.statusText)
         }
-        this.rating = newRating;
+        // no need to use setter; we don't want to paint
+        this.#rating = newRating;
         console.log('updated rating in backend');
       })
       .catch(err=>{
@@ -120,7 +121,7 @@ class PlThumb extends HTMLElement {
         // and re-enable after the change is made
         this.#removeRatingListener();
         this.rating = oldRating;
-        // for some reason, if event listener is added without a delay, it is firing again
+        // for some reason, if event listener is added without a delay, it is firing again on Chrome
         // due to the rating change to oldRating
         setTimeout(() => {
           this.#addRatingListener();
