@@ -251,6 +251,7 @@
         /* visibility: hidden; */ /* cannot transition, hence showing always*/
         font-size: 1.5rem;
         transition: transform 0.3s;
+        cursor: pointer;
       }
 
       .select-all {
@@ -271,10 +272,10 @@
       }
 
       #save {
-        color: green;
+        color: #35b035;
       }
       #cancel {
-        color: darkred;
+        color: grey;
         margin-right: 5px;
       }
 
@@ -289,7 +290,7 @@
     
     <div id="edit-controls">
       <sl-icon id="save" name="check-circle-fill"></sl-icon>
-      <sl-icon id="cancel" name="x-circle-fill"></sl-icon>
+      <sl-icon id="cancel" name="x-circle"></sl-icon>
     </div>
   </template>
 
