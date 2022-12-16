@@ -156,7 +156,8 @@ export function updateAlbum(collection_id, fromAlbum, toAlbum, updateFileName){
 
 export function getFileName(uuid){
   let stmt = db.prepare(`
-    select filename from metadata
+    select filename 
+    from metadata
     where uuid = @uuid
   `);
 

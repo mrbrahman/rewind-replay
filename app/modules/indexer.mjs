@@ -153,12 +153,20 @@ export async function deleteFromCollection(uuid){
   let start = performance.now();
   console.log(`DELETE: start to delete for uuid: ${uuid}`);
 
+  let filename = db.getFileName(uuid);
+  // TODO: read trash folder for collection, and if present, move file to trash
+  // but we don't want to query the collection for every delete, so need to think of a better solution
+
   // cleanup thumbnails
   thumbs.deleteImageThumbnails(uuid);
   // delete faces
   thumbs.deleteFaceThumbnails(uuid);
   // remove from db
   db.indexerDbWriteInChunks.add( {action: 'delete', data: {uuid: uuid}} );
+
+  // finally remove file
+  // TODO: trash folder
+  fileOps.deleteFile(filename);
   
   console.log(`Completed DELETE for ${uuid} in ${performance.now()-start} ms`);
 }
