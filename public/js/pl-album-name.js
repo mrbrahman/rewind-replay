@@ -60,6 +60,23 @@ class PlAlbumName extends HTMLElement {
 
   #handleFocus = (evt) => {
     this.shadowRoot.getElementById('edit-controls').style.visibility = 'visible';
+
+    // position to cursor to enable easy editing
+    let len = this.albumName.length;
+    let tbd = this.albumName.search(/(Sush Phone |Shreyas Phone )?TBD/g);
+
+    if(tbd>0){
+      var range = document.createRange();
+      var sel = window.getSelection();
+  
+      let albumNameText = this.shadowRoot.getElementById('album-name').childNodes[0];
+  
+      range.setStart(albumNameText, tbd >=0? tbd : len);
+      range.setEnd(albumNameText, len);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
   }
 
   #handleBlur = (evt) => {
