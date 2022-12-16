@@ -1,5 +1,6 @@
 import 'https://unpkg.com/navigo';
 
+// TODO: need to cherry-pick shoelace components
 // import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.86/dist/components/rating/rating.js';
 // import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/input/input.js';
 // import 'https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.0.0-beta.83/dist/components/icon/icon.js';
