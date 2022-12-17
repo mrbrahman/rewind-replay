@@ -1,3 +1,5 @@
+import {notify} from './utils.mjs';
+
 class PlAlbumName extends HTMLElement {
 
   #albumName; #albumSelectedValue='none';
@@ -35,14 +37,37 @@ class PlAlbumName extends HTMLElement {
   }
 
   #handleSave = (evt) => {
-    if(this.shadowRoot.getElementById('album-name').innerText != this.albumName){
-      console.log('TODO: save in db');
-      this.albumName = this.shadowRoot.getElementById('album-name').innerText;
-      // TODO: notify of successful change
+    if(this.shadowRoot.getElementById('album-name').innerText == this.albumName){
+      return;
     }
 
-    this.shadowRoot.getElementById('album-name').blur();
-    this.shadowRoot.getElementById('edit-controls').style.visibility = 'hidden';
+    // album name is changed, updated in backend
+    fetch('/updateAlbumName', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        collection_id: 1, // TODO: hardcoded for now, update this when "state" is implemented
+        currAlbumName: this.#albumName,
+        newAlbumName: this.shadowRoot.getElementById('album-name').innerText
+      })
+    }).then(res=>{
+      // TODO: error message
+      if(!res.ok){
+        return Promise.reject(res.status+':'+res.statusText)
+      }
+      this.albumName = this.shadowRoot.getElementById('album-name').innerText;
+      this.shadowRoot.getElementById('album-name').blur();
+      this.shadowRoot.getElementById('edit-controls').style.visibility = 'hidden';
+
+      notify('Album name updated successfully');
+      
+    }).catch(err=>{
+      notify(`<strong>Error</strong>:</br>${err}`, 'danger', 'exclamation-octagon', -1);
+
+    });
+
   }
 
   #handleCancel = (evt) => {
@@ -92,6 +117,7 @@ class PlAlbumName extends HTMLElement {
     if (evt.key == "Escape"){
       this.#handleCancel();
     } else if(evt.key == "Enter"){
+      evt.preventDefault(); // we don't want an actual \n in the album name
       this.#handleSave();
     }
   }
