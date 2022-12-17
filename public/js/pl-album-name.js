@@ -41,7 +41,7 @@ class PlAlbumName extends HTMLElement {
       return;
     }
 
-    // album name is changed, updated in backend
+    // album name is changed, update in backend
     fetch('/updateAlbumName', {
       method: 'POST',
       headers: {
