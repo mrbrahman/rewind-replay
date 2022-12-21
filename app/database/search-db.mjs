@@ -105,20 +105,21 @@ export function runSearch(collection_id, searchStr){
 
   let sql = `
   with t as (
-    select album, aspectratio, uuid, mimetype, file_date
+    select album, aspectratio, uuid, mimetype, coalesce(rating,0) as rating, file_date
     from metadata
     where ${filters.join(' and ')}
     and mediatype in ('image', 'video')  -- TODO: add audio
     order by album desc, file_date
   )
-  select album as groupid, 
+  select album, 
     json_group_array(
       json_object(
-        'aspectRatio', round(aspectratio, 1), 
-        'filename', uuid, 
-        'mimetype', mimetype
+        'ar', round(aspectratio, 1), 
+        'id', uuid, 
+        'type', mimetype,
+        'rating', rating
       )
-    ) as images 
+    ) as items 
   from t
   group by album
   order by album desc
@@ -132,7 +133,8 @@ export function runSearch(collection_id, searchStr){
 
 function transformSearchResultsFromDb(rows){
   return rows.map(row=>{
-    row['images'] = JSON.parse(row['images']);
+    row['items'] = JSON.parse(row['items']);
+    row['id'] = row['album'].replace(/[\s&\/]/ig, '_');
     return row
   });
 }

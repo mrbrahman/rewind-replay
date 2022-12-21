@@ -154,3 +154,7 @@ export function renameFolder(collection, currAlbum, newAlbum){
   
   fs.renameSync(currFolderName, newFolderName);
 }
+
+export function deleteFile(fileName){
+  fs.unlinkSync(fileName);
+}

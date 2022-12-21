@@ -3,7 +3,7 @@ import chokidar from 'chokidar';
 
 import {config} from '../config.mjs';
 import {getAllCollections} from './collections.mjs';
-import {addToIndexQueue} from './indexer.mjs';
+import {addToIndexQueue, ignoreWatcherList} from './indexer.mjs';
 
 // store an array of {collection_id: <id>, listen_path: <path>, watcher: <chokidar watcher>}
 var allWatchers = [];
@@ -25,6 +25,11 @@ export function startWatcherForCollection(collection){
       }
     })
       .on('add', file=>{
+        if(ignoreWatcherList[file] != undefined){
+          console.log(`ignoring file ${file}`);
+          return;
+        }
+
         console.log(`watcher: ${file} is added`);
         addToIndexQueue(collection, file, null, false);
       })

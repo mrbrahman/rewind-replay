@@ -4,7 +4,7 @@
   "description": "Relive every (captured) moment!",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "nodemon server.mjs"
   },
   "keywords": [
     "photos",
@@ -15,7 +15,7 @@
   "author": "Shreyas Jois",
   "license": "ISC",
   "dependencies": {
-    "better-sqlite3": "^7.4.5",
+    "better-sqlite3": "^8.0.1",
     "chokidar": "^3.5.2",
     "configstore": "^6.0.0",
     "dateformat": "^5.0.2",
@@ -25,5 +25,11 @@
     "minimist": "^1.2.5",
     "sharp": "^0.31.0",
     "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  },
+  "nodemonConfig": {
+    "ignore": ["public/**", "tests/**"]
   }
 }

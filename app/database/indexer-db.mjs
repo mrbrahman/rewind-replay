@@ -150,6 +150,28 @@ export function updateAlbum(collection_id, fromAlbum, toAlbum, updateFileName){
     and album = @fromAlbum
   `);
 
-  let updates = stmt.run({collection_id, fromAlbum, toAlbum});
-  return updates;
+  let cnt = stmt.run({collection_id, fromAlbum, toAlbum});
+  return cnt;
+}
+
+export function getFileName(uuid){
+  let stmt = db.prepare(`
+    select filename 
+    from metadata
+    where uuid = @uuid
+  `);
+
+  return stmt.get({uuid}).filename;
+}
+
+export function updateRating(uuid, newRating, fileModifyDate){
+  let stmt = db.prepare(`
+    update metadata
+    set rating = @newRating,
+      file_modify_date = @fileModifyDate
+    where uuid = @uuid
+  `);
+
+  let cnt = stmt.run({uuid, newRating, fileModifyDate});
+  return cnt;
 }
