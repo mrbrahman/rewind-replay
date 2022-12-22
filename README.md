@@ -10,10 +10,12 @@ Currently this project is very much a work-in-progress.
 
 1. We don't want to use cloud providers for personal photo collection.
 2. Some of us really care about our media in folders that we have meticulously curated from a long time. With any tool, we want the ability to continue to manage pics in folders.
-3. The single source of truth is the photo itself. (For those who don't know, a photo/video taken by a modern camera/phone not only stores the image/video content, but also some/a lot of metadata about the content). Hence, we want all metadata, including user tags, ML based face / objects labels etc., to go back to the photo, to the extent possible.
+3. The single source of truth is the photo itself (*). Hence, we want all metadata, including user tags, ML based face / objects labels etc., to go back to the photo, to the extent possible.
 4. In the same vein, we also want the tool to utlize the metadata already existing in the photos (updated by device / other tools).
 5. In other words, we don't want to be locked-down by any one particular tool (including this one!).
 6. Some kind of sensible, not too constrained search is needed, even though it may (will) not be as good as Google.
+
+(*) For those who are no aware, a photo/video taken by a modern camera/phone not only stores the image/video content, but also metadata about the photo/video (for e.g. GPS coordinates, time of the photo/video, duration for videos, photo/video dimensions, orientation, recognized faces etc)
 
 # Key Terms
 1. **Photo / Video**: The individual photo / video (duh!)
