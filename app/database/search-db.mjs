@@ -114,7 +114,7 @@ export function runSearch(collection_id, searchStr){
   select album, 
     json_group_array(
       json_object(
-        'ar', round(aspectratio, 1), 
+        'ar', round(aspectratio, 3), 
         'id', uuid, 
         'type', mimetype,
         'rating', rating
