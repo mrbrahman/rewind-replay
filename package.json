@@ -17,6 +17,7 @@
   "dependencies": {
     "better-sqlite3": "^8.0.1",
     "chokidar": "^3.5.2",
+    "compression": "^1.7.4",
     "configstore": "^6.0.0",
     "dateformat": "^5.0.2",
     "exiftool-vendored": "^18.0.0",
@@ -30,6 +31,9 @@
     "nodemon": "^2.0.20"
   },
   "nodemonConfig": {
-    "ignore": ["public/**", "tests/**"]
+    "ignore": [
+      "public/**",
+      "tests/**"
+    ]
   }
 }

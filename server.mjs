@@ -1,12 +1,14 @@
 import * as path from 'path';
 
 import express from 'express';
+import compression from 'compression';
 
 import {config} from './app/config.mjs';
 import * as s from './app/services.mjs'
 
 const app = express();
 
+app.use(compression());
 app.use(express.json());
 app.use(express.static('public'));
 
