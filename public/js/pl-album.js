@@ -271,7 +271,7 @@ class PlAlbum extends HTMLElement {
   
   #getMinAspectRatio(){
     if (this.width <= 640) {
-      return 2;
+      return 1.5;
     } else if (this.width <= 1280) {
       return 4;
     } else if (this.width <= 1920) {
