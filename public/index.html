@@ -43,6 +43,9 @@
     }
     #nav-header > #nav-search-box {
       flex-grow: 1;
+      height: 40px;
+      border-radius: 20px;
+      font-size: medium;
     }
     #nav-header > #nav-title {
       font-weight: bold;
@@ -390,9 +393,11 @@
         Rewind, Replay & Relive!
       </a>
 
-      <sl-input class="nav-item" id="nav-search-box" clearable pill type="search" enterkeyhint="search" placeholder="Search your memories...">
+      <input class="nav-item" id="nav-search-box" type="search" placeholder="Search your memories..."/>
+
+      <!-- <sl-input class="nav-item" id="nav-search-box" clearable pill type="search" enterkeyhint="search" placeholder="Search your memories...">
         <sl-icon name="search" slot="prefix"></sl-icon>
-      </sl-input>
+      </sl-input> -->
 
       <sl-icon-button class="nav-item" id="nav-settings" name="gear" label="Settings"></sl-icon-button>
     </nav>
