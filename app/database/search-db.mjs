@@ -90,7 +90,7 @@ function converToFilterStr(searchStr){
 }
 
 export function runSearch(collection_id, searchStr){
-  let filters = [];
+  let filters = [], limit = false;
   
   if(collection_id)
     filters.push(`collection_id = ${collection_id}`);
@@ -100,6 +100,8 @@ export function runSearch(collection_id, searchStr){
     console.log(parsedCondition);
 
     filters.push(parsedCondition)
+  } else {
+    limit = true;
   }
   // console.log(filters)
 
@@ -123,6 +125,7 @@ export function runSearch(collection_id, searchStr){
   from t
   group by album
   order by album desc
+  ${limit ? 'limit 300' : ''}
   `
   console.log(sql)
   var stmt = db.prepare(sql)
