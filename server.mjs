@@ -2,6 +2,8 @@ import * as path from 'path';
 
 import express from 'express';
 import compression from 'compression';
+import morgan from 'morgan';
+import winston from 'winston';
 
 import {config} from './app/config.mjs';
 import * as s from './app/services.mjs'
@@ -11,6 +13,29 @@ const app = express();
 app.use(compression());
 app.use(express.json());
 app.use(express.static('public'));
+
+const { format } = winston;
+const logger = winston.createLogger({
+  format: format.combine(
+    format.colorize(),
+    format.timestamp(),
+    format.printf((msg) => {
+      return `${msg.timestamp} [${msg.level}] ${msg.message}`;
+    })
+  ),
+  transports: [new winston.transports.Console({level: 'http'})],
+});
+
+const morganMiddleware = morgan(
+  ':method :url :status :res[content-length] - :response-time ms',
+  {
+    stream: {
+        write: (message) => logger.http(message.trim()),
+    },
+  }
+);
+
+app.use(morganMiddleware);
 
 // TODO: validate request parameters in all relevant functions?
 
