@@ -4,7 +4,7 @@
   "description": "Relive every (captured) moment!",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon server.mjs"
+    "start": "nodemon --ignore ./data --ignore ./public server.mjs"
   },
   "keywords": [
     "photos",
@@ -29,11 +29,5 @@
   },
   "devDependencies": {
     "nodemon": "^2.0.20"
-  },
-  "nodemonConfig": {
-    "ignore": [
-      "public/**",
-      "tests/**"
-    ]
   }
 }
