@@ -74,7 +74,7 @@ class PlThumb extends HTMLElement {
       <label for="chk"></label>
 
       <img />
-      <sl-rating label="Rating"></sl-rating>
+      <sl-rating label="Rating" readonly></sl-rating>
       <sl-icon-button name="trash"></sl-icon-button>
     `
     
@@ -184,9 +184,9 @@ class PlThumb extends HTMLElement {
     } 
   }
   #paintRating(){
-    if(this.isConnected){
-      // setting the value thus will not fire sl-change event
+    if(this.isConnected && this.rating > 0){
       this.shadowRoot.querySelector('sl-rating').value = this.rating;
+      this.shadowRoot.querySelector('sl-rating').style.visibility = "visible";
     }
   }
   #paintSelected(){
