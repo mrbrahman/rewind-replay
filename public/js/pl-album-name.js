@@ -77,6 +77,7 @@ class PlAlbumName extends HTMLElement {
 
     this.shadowRoot.getElementById('album-name').blur();
     this.shadowRoot.getElementById('edit-controls').style.visibility = 'hidden';
+    window.getSelection().removeAllRanges();
   }
 
   // #handleHover = (evt) => {
