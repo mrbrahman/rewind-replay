@@ -1,6 +1,8 @@
 
 // <pl-album album_name='Album 1' width=1000 gutterspace=4 paintlayout width=500 data="[{id: 1, ar:1}, {id:2, ar: 1.33}, {id:5, ar:0.82}]"></pl-album>
 
+import { notify } from './utils.mjs';
+
 class PlAlbum extends HTMLElement {
   
   #width; #paint_layout = false; #gutterspace = 4; #data; #album_name; #album_name_height = 50; #album_height; 
@@ -222,12 +224,50 @@ class PlAlbum extends HTMLElement {
 
   changeRatingSelectedItems(newRating) {
     this.data.forEach(item=>{
-      if(item.elem && item.elem.selected){
-        item.elem.rating = newRating;
-      } else if (item.layout.selected){
-        item.data.rating = newRating;
+      if(! ((item.elem && item.elem.selected)||item.data.selected)){
+        return;
       }
-    })    
+
+      // update in db
+      // updateRating(item.data.id, newRating)
+      fetch(`updateRating?uuid=${item.data.id}&newRating=${newRating}`, {method: "PUT"})
+      .then(async (res)=>{
+        let isJson = res.headers.get('content-type')?.includes('application/json');
+        let output = isJson ? await res.json() : null;
+
+        if(!res.ok){
+          return Promise.reject(output.error || res.status+':'+res.statusText)
+        }
+        // no need to use setter; we don't want to paint
+        // this.#rating = newRating;
+        console.log('updated rating in backend');
+      })
+      .then(()=>{
+        if(item.elem && item.elem.selected){
+          item.elem.rating = newRating;
+        } else if (item.layout.selected){
+          item.data.rating = newRating;
+        }
+      })
+      .catch(err=>{
+        // using the setter here, since we need to paint the rating back to original value
+        // but we don't want that change to fire an event, hence disable event listener first
+        // and re-enable after the change is made
+        // this.#removeRatingListener();
+        // this.rating = oldRating;
+        // // for some reason, if event listener is added without a delay, it is firing again on Chrome
+        // // due to the rating change to oldRating
+        // setTimeout(() => {
+        //   this.#addRatingListener();
+        // }, 1000);
+        
+        notify(`<strong>Error</strong>:</br>${err}`, 'danger', 'exclamation-octagon', -1);
+        
+      })
+      // .catch((err)=>{
+      //   notify(`<strong>Error</strong>:</br>${err}`, 'danger', 'exclamation-octagon', -1);
+      // })
+    }) 
   }
 
   deleteSelectedItems(){

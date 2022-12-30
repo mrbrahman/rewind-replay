@@ -18,6 +18,9 @@ class PlGalleryControls extends HTMLElement {
       .addEventListener('sl-change', this.#handleRatingChanged)
     ;
 
+    this.shadowRoot.getElementById('clear-rating')
+      .addEventListener('click', this.#handleClearRating)
+
     this.shadowRoot.getElementById("delete")
       .addEventListener('click', this.#handleDelete)
   }
@@ -35,6 +38,11 @@ class PlGalleryControls extends HTMLElement {
       detail: {newRating}
     });
     this.dispatchEvent(ratingChanged);
+  }
+
+  #handleClearRating = (evt)=>{
+    this.shadowRoot.getElementById('rating').value = 0;
+    // this will trigger the listener on rating
   }
 
   #handleDelete = (evt)=>{

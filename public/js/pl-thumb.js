@@ -97,7 +97,7 @@ class PlThumb extends HTMLElement {
     let checkEvent = new CustomEvent('r3-item-selected', {composed: true, bubbles: true});
     this.dispatchEvent(checkEvent);
   }
-
+/*
   #slRatingChanged = (evt)=>{
     let oldRating = this.#rating;
     let newRating = evt.target.value;
@@ -131,14 +131,14 @@ class PlThumb extends HTMLElement {
         
       })
   }
+*/
+  // #addRatingListener = ()=> this.shadowRoot.querySelector('sl-rating')
+  //   .addEventListener('sl-change', this.#slRatingChanged)
+  // ;
 
-  #addRatingListener = ()=> this.shadowRoot.querySelector('sl-rating')
-    .addEventListener('sl-change', this.#slRatingChanged)
-  ;
-
-  #removeRatingListener = ()=> this.shadowRoot.querySelector('sl-rating')
-    .removeEventListener('sl-change', this.#slRatingChanged)
-  ;  
+  // #removeRatingListener = ()=> this.shadowRoot.querySelector('sl-rating')
+  //   .removeEventListener('sl-change', this.#slRatingChanged)
+  // ;  
   
   #itemDeleted = (evt)=>{
     fetch(`/deleteFromCollection/${this.id}`, {
@@ -184,10 +184,16 @@ class PlThumb extends HTMLElement {
     } 
   }
   #paintRating(){
-    if(this.isConnected && this.rating > 0){
+    if(this.isConnected){
       this.shadowRoot.querySelector('sl-rating').value = this.rating;
-      this.shadowRoot.querySelector('sl-rating').style.visibility = "visible";
+      
+      if(this.rating > 0){
+        this.shadowRoot.querySelector('sl-rating').style.visibility = "visible";
+      } else {
+        this.shadowRoot.querySelector('sl-rating').style.visibility = "hidden";
+      }
     }
+    
   }
   #paintSelected(){
     if(!this.isConnected){
@@ -203,14 +209,14 @@ class PlThumb extends HTMLElement {
     // enable/disable listeners to update individually
     if(this.selected){
       // disable
-      this.#removeRatingListener();
+      // this.#removeRatingListener();
     
       this.shadowRoot.querySelector('sl-icon-button[name="trash"]')
         .removeEventListener('click', this.#itemDeleted)
       ;
     } else {
       // enable
-      this.#addRatingListener();
+      // this.#addRatingListener();
     
       this.shadowRoot.querySelector('sl-icon-button[name="trash"]')
         .addEventListener('click', this.#itemDeleted)
