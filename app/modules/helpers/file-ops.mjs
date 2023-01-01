@@ -155,7 +155,7 @@ export function renameFolder(collection, currAlbum, newAlbum){
     fs.renameSync(currFolderName, newFolderName);
   } catch (error) {
     console.log(error)
-    throw `Error while renaming folder: ${error.errno} ${error.code}`;
+    throw `Error while renaming folder: ${error.message}`;
   }
 }
 
