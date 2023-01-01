@@ -142,9 +142,14 @@ app.put('/updateRating', async function(req,res,next){
 // *****************************************
 app.post('/updateAlbumName', async function(req,res){
   let {collection_id, currAlbumName, newAlbumName} = req.body;
-  let updates = await s.indexer.updateAlbum(collection_id, currAlbumName, newAlbumName);
 
-  res.json(updates);
+  try {
+    let updates = await s.indexer.updateAlbum(collection_id, currAlbumName, newAlbumName);
+    res.json(updates);
+  } catch (err) {
+    res.status(500).json({error: err});
+  }
+
 });
 
 app.delete('/deleteFromCollection/:uuid', function(req,res){

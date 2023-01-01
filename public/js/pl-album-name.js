@@ -52,10 +52,15 @@ class PlAlbumName extends HTMLElement {
         currAlbumName: this.#albumName,
         newAlbumName: this.shadowRoot.getElementById('album-name').innerText
       })
-    }).then(res=>{
+    }).then(async (res)=>{
       // TODO: error message
       if(!res.ok){
-        return Promise.reject(res.status+':'+res.statusText)
+        let isJson = res.headers.get('content-type')?.includes('application/json');
+        let output = isJson ? await res.json() : null;
+
+        console.log(output.error);
+
+        return Promise.reject(output.error || res.status+':'+res.statusText)
       }
       this.albumName = this.shadowRoot.getElementById('album-name').innerText;
       this.shadowRoot.getElementById('album-name').blur();

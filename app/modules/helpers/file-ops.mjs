@@ -151,8 +151,12 @@ export function renameFolder(collection, currAlbum, newAlbum){
   let currFolderName=path.join(collection.collection_path,currAlbum),
     newFolderName=path.join(collection.collection_path,newAlbum)
   ;
-  
-  fs.renameSync(currFolderName, newFolderName);
+  try {
+    fs.renameSync(currFolderName, newFolderName);
+  } catch (error) {
+    console.log(error)
+    throw `Error while renaming folder: ${error.errno} ${error.code}`;
+  }
 }
 
 export function deleteFile(fileName){
