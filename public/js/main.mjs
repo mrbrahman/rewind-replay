@@ -72,6 +72,7 @@ function showGallery(data){
     return;
   }
   
+  document.getElementById("nav-search-box").blur();
   let g = Object.assign(document.createElement('pl-gallery'), { data });
   
   c.innerHTML = "";
