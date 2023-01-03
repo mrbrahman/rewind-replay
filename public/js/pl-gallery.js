@@ -114,7 +114,7 @@ class PlGallery extends HTMLElement {
       album.style.top = cumHeight+'px';
       album.style.left = '0px';
 
-      cumHeight += album.album_height + 40; // px between albums
+      cumHeight += album.album_height; //+ 40; // px between albums
     });
   }
   

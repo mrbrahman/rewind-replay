@@ -5,7 +5,7 @@ import { notify } from './utils.mjs';
 
 class PlAlbum extends HTMLElement {
   
-  #width; #paint_layout = false; #gutterspace = 4; #data; #album_name; #album_name_height = 50; #album_height; 
+  #width; #paint_layout = false; #gutterspace = 4; #data; #album_name; #album_name_height = 45; #album_height; 
   
   static get observedAttributes() {
     return ['paint_layout','album_name','width','gutterspace','data','data_src'];
