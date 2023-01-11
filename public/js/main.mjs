@@ -13,16 +13,12 @@ import './pl-album.js';
 import './pl-album-name.js';
 import './pl-gallery.js';
 import './pl-gallery-controls.js';
+import './pl-slideshow.js';
+
 
 const router = new Navigo('/', {hash: true});
 
-router.on('/', function(){
-  fetch('/getAll').then(response=>response.json())
-    .then(result=>{
-      showGallery(result);
-    })
-  ;
-})
+let galleryData = [];
 
 // found at https://tutorial.eyehunts.com/js/call-javascript-function-on-enter-keypress-in-the-textbox-example-code/
 let searchBox = document.getElementById("nav-search-box");
@@ -48,23 +44,10 @@ function performSearch(){
   router.navigate(`/search/${escapeURL(searchText)}`)
 }
 
-router.on('/search/:searchText', function({data}){
-  fetch('/search', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({collection_id: 1, searchText: data.searchText}) // TODO: collection_id -- need to maintain state
-  })
-  .then(response=>response.json())
-  .then(result=>{
-    showGallery(result);
-  })
-});
-
-router.resolve();
 
 function showGallery(data){
+  galleryData = data;
+  window.galleryData = data;
   let c = document.getElementById('main-content');
   if(data.length == 0){
     c.innerHTML = "No results found";
@@ -72,6 +55,7 @@ function showGallery(data){
   }
   
   document.getElementById("nav-search-box").blur();
+
   let g = Object.assign(document.createElement('pl-gallery'), { data });
   
   c.innerHTML = "";
@@ -79,3 +63,64 @@ function showGallery(data){
 
   notify(`Found ${data.length.toLocaleString()} albums containing ${data.map(x=>x.items.length).reduce((a,c)=>a+c).toLocaleString()} items`);
 }
+
+document.getElementById('app').addEventListener('pl-gallery-item-clicked', (evt)=>{
+  console.log(evt.detail);
+  router.navigate(`/slideshow/${evt.detail.id}`)
+})
+
+router.on('/', function(){
+  if(document.querySelector('pl-slideshow')){
+    document.querySelector('pl-slideshow').remove();
+
+    document.getElementById('nav-header').style.opacity = 1;
+    document.getElementById('main-content').style.opacity = 1;
+    return;
+  }
+
+  fetch('/getAll').then(response=>response.json())
+    .then(result=>{
+      showGallery(result);
+    })
+  ;
+});
+
+router.on('/search/:searchText', function(p){
+  // TODO: eliminate duplicate code
+  if(document.querySelector('pl-slideshow')){
+    document.querySelector('pl-slideshow').remove();
+
+    document.getElementById('nav-header').style.opacity = 1;
+    document.getElementById('main-content').style.opacity = 1;
+    return;
+  }
+
+  fetch('/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({collection_id: 1, searchText: p.data.searchText}) // TODO: collection_id -- need to maintain state
+  })
+  .then(response=>response.json())
+  .then(result=>{
+    showGallery(result);
+  })
+});
+
+router.on('/slideshow/:startFrom', function(p){
+  document.getElementById('nav-header').style.opacity = 0;
+  document.getElementById('main-content').style.opacity = 0;
+
+  let s = Object.assign(document.createElement('pl-slideshow'), {
+    data: galleryData,
+    startFrom: p.data.startFrom,
+    buffer: 3,
+    loop: true
+  });
+
+  // this has to go under app (not under main-content)
+  document.getElementById('app').appendChild(s);
+})
+
+router.resolve();

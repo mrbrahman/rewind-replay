@@ -190,3 +190,16 @@ export function deleteFaceThumbnails(uuid){
   }
 }
 
+export function resizeImage(filename, width, height){
+  const readStream = fs.createReadStream(filename);
+  let transform = sharp() //readStream, { failOnError: false })
+    .rotate()
+    .resize({
+      width: width, 
+      height: height,
+      fit: "inside",
+      withoutEnlargement: true
+    });
+  
+  return readStream.pipe(transform);
+}

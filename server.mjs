@@ -60,6 +60,17 @@ app.get('/getThumbnail', function(req,res){
   res.sendFile(fileName, {root: '.'});
 });
 
+app.get('/getImage', function(req,res){
+  let uuid = req.query.uuid, height = +req.query.height, width = +req.query.width;
+  
+  res.type('image/jpg');
+  // res.set({
+  //   "Content-Disposition": `inline;filename="${filename.split(/\//).pop()}"`
+  // });
+
+  s.search.getImage(uuid, width, height).pipe(res);
+})
+
 app.post('/search', function(req,res){
   let {collection_id, searchText} = req.body;
   res.json(s.search.search(collection_id, searchText));

@@ -88,6 +88,17 @@ class PlThumb extends HTMLElement {
       .addEventListener('click', this.#handleSelection)
     ;
 
+    this.addEventListener('click', ()=>{
+      console.log('item clicked');
+      let clickEvent = new CustomEvent('pl-gallery-item-clicked', {
+        composed: true, 
+        bubbles: true, 
+        detail: {id: this.id}
+      });
+
+      this.dispatchEvent(clickEvent);
+    })
+
     // event listeners for rating ang trash will be added during paintSelect
     
   }
