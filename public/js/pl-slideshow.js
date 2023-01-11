@@ -23,9 +23,7 @@ class PlSlideshow extends HTMLElement {
     this.#screenWidth  = document.documentElement.clientWidth;
 
     console.log(`startIdx: ${this.#startIdx}`);
-    console.log(`height: ${this.#screenHeight} width: ${this.#screenWidth}`)
-    // console.log(`data length: ${this.data.length}`);
-    // console.log(this.data);
+    // console.log(`height: ${this.#screenHeight} width: ${this.#screenWidth}`);
 
     let slide = this.#createSlide(this.#startIdx);
     slide.classList.add('active');
@@ -81,7 +79,6 @@ class PlSlideshow extends HTMLElement {
     } else {
       // ignore
     }
-    
   }
 
   #handleLeftArrow = (evt)=>{
@@ -90,7 +87,6 @@ class PlSlideshow extends HTMLElement {
     } else {
       // ignore
     }
-    
   }
 
   // Adapted from https://stackoverflow.com/a/16102526/8098748
@@ -146,7 +142,7 @@ class PlSlideshow extends HTMLElement {
   }
 
   #next(){
-    // first make DOM changes
+    // first make DOM changes visible to user
     let activeSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="0"]');
     activeSlide.classList.add('left');
     activeSlide.classList.remove('active');
@@ -155,26 +151,25 @@ class PlSlideshow extends HTMLElement {
     nextSlide.classList.add('active');
     nextSlide.classList.remove('right');
 
-    // now adjust data-pos values
+    // now make DOM changes that are not visibile to the user
     for(let i=-this.buffer; i<=this.buffer; i++){
+      
       let slide = this.shadowRoot.getElementById('slides').querySelector(`[data-pos="${i}"]`);
+
       if(!slide){
-        if(i==2){ // position of last slide will be 2 before updating to 1
-          this.shadowRoot.getElementById('next').style.display = 'none';
-          window.removeEventListener('keydown', this.#handleRightArrow);
-        }
         break;
       }
 
-      if(i==-this.buffer){
+      if(i == -this.buffer){
+        // remove slide at the left
         slide.remove();
       } else {
+        // adjust positions for the remaining
         slide.dataset.pos = i-1;
 
-        // add a slide at the end (end is now buffer - 1, due to previous statement)
-        // using == here to ingore datatypes (string vs int)
-        if(slide.dataset.pos == this.buffer-1){
-          let nextIdx = this.#nextIdx(slide.dataset.idx.split(',').map(x=>parseInt(x)));
+        // add a slide at the end, use the 'idx' from the slide previously at 'buffer' position
+        if(i == this.buffer){
+          let nextIdx = this.#nextIdx( slide.dataset.idx.split(',').map(x=>parseInt(x)) );
           
           if(nextIdx){
             let slide = this.#createSlide(nextIdx);
@@ -187,6 +182,12 @@ class PlSlideshow extends HTMLElement {
           }
         }
       }
+    } // for loop
+
+    // remove next if there is no slide to show
+    if(!this.shadowRoot.getElementById('slides').querySelector('[data-pos="1"]')){
+      this.shadowRoot.getElementById('next').style.display = 'none';
+      window.removeEventListener('keydown', this.#handleRightArrow);
     }
 
   }
