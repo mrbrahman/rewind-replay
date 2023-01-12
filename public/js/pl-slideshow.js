@@ -157,7 +157,7 @@ class PlSlideshow extends HTMLElement {
       let slide = this.shadowRoot.getElementById('slides').querySelector(`[data-pos="${i}"]`);
 
       if(!slide){
-        break;
+        continue;
       }
 
       if(i == -this.buffer){
@@ -190,10 +190,68 @@ class PlSlideshow extends HTMLElement {
       window.removeEventListener('keydown', this.#handleRightArrow);
     }
 
+    // enable the prev button if it was removed before
+    if(this.shadowRoot.getElementById('prev').style.display == 'none'){
+      this.shadowRoot.getElementById('prev').style.display = 'block';
+      window.addEventListener('keydown', this.#handleLeftArrow);
+    }
+
   }
 
   #prev(){
-    console.log('TBD prev')
+    // first make DOM changes visible to user
+    let activeSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="0"]');
+    activeSlide.classList.add('right');
+    activeSlide.classList.remove('active');
+
+    let nextSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="-1"]');
+    nextSlide.classList.add('active');
+    nextSlide.classList.remove('left');
+
+    // now make DOM changes that are not visibile to the user
+    for(let i=this.buffer; i>=-this.buffer; i--){
+      
+      let slide = this.shadowRoot.getElementById('slides').querySelector(`[data-pos="${i}"]`);
+
+      if(!slide){
+        continue;
+      }
+
+      if(i == this.buffer){
+        // remove slide at the right
+        slide.remove();
+      } else {
+        // adjust positions for the remaining
+        slide.dataset.pos = i+1;
+
+        // add a slide at the end, use the 'idx' from the slide previously at 'buffer' position
+        if(i == -this.buffer){
+          let prevIdx = this.#prevIdx( slide.dataset.idx.split(',').map(x=>parseInt(x)) );
+          
+          if(prevIdx){
+            let slide = this.#createSlide(prevIdx);
+            slide.classList.add('left');
+            slide.dataset.pos = -this.buffer;
+            slide.dataset.idx = prevIdx.toString();
+            this.shadowRoot.getElementById('slides').append(slide);
+          } else {
+            // we've reached the end of slide show
+          }
+        }
+      }
+    } // for loop
+
+    // remove prev if there is no slide to show
+    if(!this.shadowRoot.getElementById('slides').querySelector('[data-pos="-1"]')){
+      this.shadowRoot.getElementById('prev').style.display = 'none';
+      window.removeEventListener('keydown', this.#handleLeftArrow);
+    }
+
+    // enable the next button if it was removed before
+    if(this.shadowRoot.getElementById('next').style.display == 'none'){
+      this.shadowRoot.getElementById('next').style.display = 'block';
+      window.addEventListener('keydown', this.#handleRightArrow);
+    }
   }
 
   disconnectedCallback() {
