@@ -71,6 +71,20 @@ class PlSlideshow extends HTMLElement {
 
     window.addEventListener('keydown', this.#handleRightArrow);
     window.addEventListener('keydown', this.#handleLeftArrow);
+
+    // conditionally enable prev and next
+
+    // remove prev if there is no slide to show
+    if(!this.shadowRoot.getElementById('slides').querySelector('[data-pos="-1"]')){
+      this.shadowRoot.getElementById('prev').style.display = 'none';
+      window.removeEventListener('keydown', this.#handleLeftArrow);
+    }
+
+    // remove next if there is no slide to show
+    if(!this.shadowRoot.getElementById('slides').querySelector('[data-pos="1"]')){
+      this.shadowRoot.getElementById('next').style.display = 'none';
+      window.removeEventListener('keydown', this.#handleRightArrow);
+    }
   }
 
   #handleRightArrow = (evt)=>{
