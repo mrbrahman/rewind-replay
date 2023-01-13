@@ -18,7 +18,7 @@ import './pl-slideshow.js';
 
 const router = new Navigo('/', {hash: true});
 
-let galleryData = [];
+let galleryData = [], prevLink;
 
 // found at https://tutorial.eyehunts.com/js/call-javascript-function-on-enter-keypress-in-the-textbox-example-code/
 let searchBox = document.getElementById("nav-search-box");
@@ -67,7 +67,15 @@ function showGallery(data){
 document.getElementById('app').addEventListener('pl-gallery-item-clicked', (evt)=>{
   console.log(evt.detail);
   router.navigate(`/slideshow/${evt.detail.id}`)
-})
+});
+
+document.getElementById('app').addEventListener('pl-slideshow-closed', ()=>{
+  router.navigate(prevLink[0].url);
+});
+
+// 
+// router paths
+// 
 
 router.on('/', function(){
   if(document.querySelector('pl-slideshow')){
@@ -109,14 +117,15 @@ router.on('/search/:searchText', function(p){
 });
 
 router.on('/slideshow/:startFrom', function(p){
+  prevLink = router.lastResolved();
+  
   document.getElementById('nav-header').style.opacity = 0;
   document.getElementById('main-content').style.opacity = 0;
 
   let s = Object.assign(document.createElement('pl-slideshow'), {
     data: galleryData,
     startFrom: p.data.startFrom,
-    buffer: 3,
-    loop: true
+    buffer: 3
   });
 
   // this has to go under app (not under main-content)

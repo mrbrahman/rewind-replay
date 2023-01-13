@@ -66,11 +66,14 @@ class PlSlideshow extends HTMLElement {
       }
     }
 
+    this.shadowRoot.getElementById('close').addEventListener('click', this.#slideshowClosed);
+
     this.shadowRoot.getElementById('next').addEventListener('click', ()=>this.#next())
     this.shadowRoot.getElementById('prev').addEventListener('click', ()=>this.#prev())
 
     window.addEventListener('keydown', this.#handleRightArrow);
     window.addEventListener('keydown', this.#handleLeftArrow);
+    window.addEventListener('keyup', this.#handleSlideshowEscape);
 
     // conditionally enable prev and next
 
@@ -85,6 +88,19 @@ class PlSlideshow extends HTMLElement {
       this.shadowRoot.getElementById('next').style.display = 'none';
       window.removeEventListener('keydown', this.#handleRightArrow);
     }
+  }
+
+  #handleSlideshowEscape = (evt) =>{
+    if(evt.key == "Escape"){
+      this.#slideshowClosed();
+    } else {
+      // ignore all other keys
+    }
+  }
+
+
+  #slideshowClosed = ()=>{
+    this.dispatchEvent(new Event('pl-slideshow-closed', {composed: true, bubbles: true}));
   }
 
   #handleRightArrow = (evt)=>{
@@ -269,7 +285,8 @@ class PlSlideshow extends HTMLElement {
   }
 
   disconnectedCallback() {
-    //implementation
+    window.removeEventListener('keydown', this.#handleRightArrow);
+    window.removeEventListener('keydown', this.#handleLeftArrow);
   }
 
   attributeChangedCallback(name, oldVal, newVal) {
