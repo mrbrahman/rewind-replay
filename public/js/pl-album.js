@@ -238,35 +238,24 @@ class PlAlbum extends HTMLElement {
         if(!res.ok){
           return Promise.reject(output.error || res.status+':'+res.statusText)
         }
-        // no need to use setter; we don't want to paint
-        // this.#rating = newRating;
         console.log('updated rating in backend');
       })
+      // Update in backend successful, now update the UI
       .then(()=>{
-        if(item.elem && item.elem.selected){
+        // update data
+        item.data.rating = newRating;
+
+        // update element if one was created
+        if(item.elem){
+          // there is no listener on the rating element, so we can 
+          // safely update here
           item.elem.rating = newRating;
-        } else if (item.layout.selected){
-          item.data.rating = newRating;
         }
       })
       .catch(err=>{
-        // using the setter here, since we need to paint the rating back to original value
-        // but we don't want that change to fire an event, hence disable event listener first
-        // and re-enable after the change is made
-        // this.#removeRatingListener();
-        // this.rating = oldRating;
-        // // for some reason, if event listener is added without a delay, it is firing again on Chrome
-        // // due to the rating change to oldRating
-        // setTimeout(() => {
-        //   this.#addRatingListener();
-        // }, 1000);
-        
         notify(`<strong>Error</strong>:</br>${err}`, 'danger', 'exclamation-octagon', -1);
-        
-      })
-      // .catch((err)=>{
-      //   notify(`<strong>Error</strong>:</br>${err}`, 'danger', 'exclamation-octagon', -1);
-      // })
+      });
+
     }) 
   }
 
@@ -478,11 +467,8 @@ class PlAlbum extends HTMLElement {
   set data(_){
     // create a placeholder for the element
     // this will be further updated with the layout and actual element reference
-    this.#data = _.map(x=>{
-      return {
-        data : { ...x }
-      }
-    });
+    this.#data = _;
+
   }
 
   get album_name_height(){

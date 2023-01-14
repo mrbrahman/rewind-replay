@@ -15,6 +15,8 @@ class PlSlideshow extends HTMLElement {
       return;
     }
 
+    // console.log(this.data)
+
     if(this.startFrom){
       this.#startIdx = this.#getIndexOfK(this.data, this.startFrom);
     }
@@ -122,7 +124,7 @@ class PlSlideshow extends HTMLElement {
   // Adapted from https://stackoverflow.com/a/16102526/8098748
   #getIndexOfK(arr, k) {
     for (var i = 0; i < arr.length; i++) {
-      var index = arr[i].items.findIndex(e=>e.id==k);
+      var index = arr[i].items.findIndex(e=>e.data.id==k);
       if (index > -1) {
         return [i, index];
       }
@@ -162,7 +164,7 @@ class PlSlideshow extends HTMLElement {
   #createSlide(idx){
     let slide = Object.assign(document.createElement('pl-slide'), {
       albumname: this.data[idx[0]].album,
-      data: this.data[idx[0]].items[idx[1]],
+      data: this.data[idx[0]].items[idx[1]].data,
       screenWidth: this.#screenWidth,
       screenHeight: this.#screenHeight
     });
