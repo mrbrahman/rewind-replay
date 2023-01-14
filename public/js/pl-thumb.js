@@ -70,10 +70,10 @@ class PlThumb extends HTMLElement {
     
     // create the rest of the elements
     this.shadowRoot.getElementById('container').innerHTML = `
+      <img />
       <input type="checkbox" id="chk">
       <label for="chk"></label>
 
-      <img />
       <sl-rating label="Rating" readonly></sl-rating>
       <sl-icon-button name="trash"></sl-icon-button>
     `
@@ -88,7 +88,7 @@ class PlThumb extends HTMLElement {
       .addEventListener('click', this.#handleSelection)
     ;
 
-    this.addEventListener('click', ()=>{
+    this.shadowRoot.querySelector('img').addEventListener('click', ()=>{
       console.log('item clicked');
       let clickEvent = new CustomEvent('pl-gallery-item-clicked', {
         composed: true, 

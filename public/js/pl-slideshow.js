@@ -160,15 +160,13 @@ class PlSlideshow extends HTMLElement {
   }
 
   #createSlide(idx){
-    let img = Object.assign(document.createElement('img'), {
-      src: `/getImage?uuid=${this.data[idx[0]].items[idx[1]].id}&width=${this.#screenWidth}&height=${this.#screenHeight}`
+    let slide = Object.assign(document.createElement('pl-slide'), {
+      albumname: this.data[idx[0]].album,
+      data: this.data[idx[0]].items[idx[1]],
+      screenWidth: this.#screenWidth,
+      screenHeight: this.#screenHeight
     });
-
-    let div = document.createElement('div');
-    div.classList = 'slide';
-    div.appendChild(img);
-
-    return div;
+    return slide;
   }
 
   #next(){

@@ -421,8 +421,53 @@
 
       #close {
         position: absolute;
-        top: 10px;
-        right: 10px;
+        bottom: 10px;
+        left: 10px;
+      }
+
+      #slides > * {
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        transition: transform 0.2s;
+      }
+      
+      #slides > .active {
+        transform: translate(0px, 0px);
+      }
+
+      #slides > .left {
+        left: 0px;
+        transform: translate(-120vw, 0px);
+      }
+
+      #slides > .right {
+        left: 0px;
+        transform: translate(120vw, 0px);
+      }
+
+    </style>
+
+    <div id="container">
+      <div id="slides" >
+      </div>
+
+      <div id="navigation">
+        <sl-icon-button id="prev" name="chevron-left"></sl-icon-button>
+        <sl-icon-button id="next" name="chevron-right"></sl-icon-button>
+        <sl-icon-button id="close" name="x"></sl-icon-button>
+      </div>
+
+    </div>
+
+  </template>
+
+  <template id="PL-SLIDE">
+    <style>
+      #container {
+        position: relative;
+        width: 100vw;
+        height: 100svh;
       }
 
       #albumname {
@@ -432,72 +477,47 @@
         color: white;
       }
 
+      #media {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: white;
+      }
+
       #actions {
         position: absolute;
-        bottom: 10px;
+        top: 20px;
         right: 10px;
         display: flex;
         align-items: center;
       }
 
-      /* img {
-        max-width: 100vw;
-        max-height: 100svh;
-      } */
-
-      #slides > * {
-        position: absolute;
-        top: 50%;
-        transition: transform 0.2s, left 0.2s;
-      }
-      
-      #slides > .active {
-        left: 50%;
-        transform: translate(-50%,-50%);
+      #actions > * {
+        padding-left: 5px;
       }
 
-      #slides > .left {
-        left: 0px;
-        transform: translate(-100vw, -50%);
+      sl-icon-button {
+        font-size: 1.20rem;
       }
 
-      #slides > .right {
-        left: 0px;
-        transform: translate(100vw, -50%);
+      sl-icon-button::part(base) {
+        color: white;
       }
 
     </style>
 
     <div id="container">
-      <div id="slides" >
-        <!-- <div id="1" class="slide left">
-          <img src="/getThumbnail?uuid=7c7866ba-b934-4a0d-a7f7-5742296205e2&height=500">
-        </div>
-
-        <div id="2" class="slide left">
-          <img src="/getThumbnail?uuid=3e9fc889-63c8-4918-a6e6-8a6513b41b5b&height=500">
-        </div>
-
-        <div id="3" class="slide active">
-          <img src="/getThumbnail?uuid=ccc0037e-daeb-4899-b08a-8c697b190b81&height=500">
-        </div> -->
-      </div>
-
-      <div id="albumname">2022/2022-01-01 Happy New Year!</div>
-      <div id="navigation">
-        <sl-icon-button id="prev" name="chevron-left"></sl-icon-button>
-        <sl-icon-button id="next" name="chevron-right"></sl-icon-button>
-        <sl-icon-button id="close" name="x"></sl-icon-button>
-      </div>
+      <div id="media"></div>
+      <div id="albumname"></div>
       <div id="actions">
         <sl-rating id="rating"></sl-rating>
-        <sl-icon-button name="tags-fill">Keywords</sl-icon-button>
         <sl-icon-button id="delete" name="trash-fill">Delete</sl-icon-button>
         <sl-icon-button name="download">Download</sl-icon-button>
+        <sl-icon-button name="three-dots-vertical">More Options</sl-icon-button>
+
       </div>
-
     </div>
-
   </template>
 
 </head>

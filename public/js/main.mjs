@@ -13,8 +13,8 @@ import './pl-album.js';
 import './pl-album-name.js';
 import './pl-gallery.js';
 import './pl-gallery-controls.js';
+import './pl-slide.js';
 import './pl-slideshow.js';
-
 
 const router = new Navigo('/', {hash: true});
 
@@ -65,7 +65,6 @@ function showGallery(data){
 }
 
 document.getElementById('app').addEventListener('pl-gallery-item-clicked', (evt)=>{
-  console.log(evt.detail);
   router.navigate(`/slideshow/${evt.detail.id}`)
 });
 
@@ -128,7 +127,7 @@ router.on('/slideshow/:startFrom', function(p){
     buffer: 3
   });
 
-  // this has to go under app (not under main-content)
+  // attaching this under app (not under main-content)
   document.getElementById('app').appendChild(s);
 })
 
