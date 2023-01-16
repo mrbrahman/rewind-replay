@@ -203,3 +203,10 @@ export function resizeImage(filename, width, height){
   
   return readStream.pipe(transform);
 }
+
+export function streamVideo(filename){
+  // TODO: use ffmpeg for converting any video to required browser format?
+  const readStream = fs.createReadStream(filename);
+
+  return readStream;
+}

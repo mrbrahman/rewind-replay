@@ -1,4 +1,4 @@
-import { resizeImage } from './helpers/thumbnails.mjs';
+import { resizeImage, streamVideo} from './helpers/thumbnails.mjs';
 
 import {getFileName} from '../database/indexer-db.mjs';
 import {getDefaultCollection} from '../database/collection-db.mjs';
@@ -20,4 +20,9 @@ export function getAllFromDefaultCollection(){
 export function getImage(uuid, width, height){
   let filename = getFileName(uuid);
   return resizeImage(filename, width, height);
+}
+
+export function getVideo(uuid){
+  let filename = getFileName(uuid);
+  return streamVideo(filename);
 }

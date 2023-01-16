@@ -69,12 +69,20 @@ app.get('/getImage', function(req,res){
   // });
 
   s.search.getImage(uuid, width, height).pipe(res);
-})
+});
+
+
+app.get('/getVideo', function(req,res){
+  let uuid = req.query.uuid, height = +req.query.height, width = +req.query.width;
+
+  s.search.getVideo(uuid).pipe(res);
+
+});
 
 app.post('/search', function(req,res){
   let {collection_id, searchText} = req.body;
   res.json(s.search.search(collection_id, searchText));
-})
+});
 
 // *****************************************
 // collection functions

@@ -23,6 +23,26 @@ class PlSlide extends HTMLElement {
         // div.classList = 'slide';
         // div.appendChild(img);
 
+      } else if (this.data.type.startsWith('video')){
+        let video = Object.assign(document.createElement('video'), {
+          width: this.#screenWidth,
+          height: this.#screenHeight,
+          controls: true,
+          autoplay: true,
+          muted: false,
+          preload: 'metadata'
+        });
+
+        let src = Object.assign(document.createElement('source'), {
+          src: `/getVideo?uuid=${this.data.id}`,
+          type: this.data.type
+        });
+
+        let txt = 'Cannot play video';
+        video.append(src, txt);
+
+        this.shadowRoot.getElementById('media').appendChild(video);
+
       } else {
         this.shadowRoot.getElementById('media').innerHTML = `<div>${this.data.type} TBD</div>`
       }
