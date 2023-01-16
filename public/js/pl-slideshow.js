@@ -32,6 +32,8 @@ class PlSlideshow extends HTMLElement {
     slide.dataset.pos = 0;
     slide.dataset.idx = this.#startIdx.toString();
     this.shadowRoot.getElementById('slides').append(slide);
+    slide.play = true;
+
 
     // paint subsequent slides first (assume the default direction is ltr)
     let currIdx = this.#startIdx;
@@ -174,12 +176,14 @@ class PlSlideshow extends HTMLElement {
   #next(){
     // first make DOM changes visible to user
     let activeSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="0"]');
+    activeSlide.play = false;
     activeSlide.classList.add('left');
     activeSlide.classList.remove('active');
 
     let nextSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="1"]');
     nextSlide.classList.add('active');
     nextSlide.classList.remove('right');
+    nextSlide.play = true;
 
     // now make DOM changes that are not visibile to the user
     for(let i=-this.buffer; i<=this.buffer; i++){
@@ -231,12 +235,14 @@ class PlSlideshow extends HTMLElement {
   #prev(){
     // first make DOM changes visible to user
     let activeSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="0"]');
+    activeSlide.play = false;
     activeSlide.classList.add('right');
     activeSlide.classList.remove('active');
 
     let nextSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="-1"]');
     nextSlide.classList.add('active');
     nextSlide.classList.remove('left');
+    nextSlide.play = true;
 
     // now make DOM changes that are not visibile to the user
     for(let i=this.buffer; i>=-this.buffer; i--){
