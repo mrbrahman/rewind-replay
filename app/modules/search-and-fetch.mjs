@@ -24,5 +24,5 @@ export function getImage(uuid, width, height){
 
 export function getVideo(uuid){
   let filename = getFileName(uuid);
-  return streamVideo(filename);
+  return streamVideo(uuid, filename);
 }

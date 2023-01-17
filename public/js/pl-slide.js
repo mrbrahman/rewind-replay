@@ -29,8 +29,8 @@ class PlSlide extends HTMLElement {
       });
 
       let src = Object.assign(document.createElement('source'), {
-        src: `/getVideo?uuid=${this.data.id}`,
-        type: this.data.type
+        src: `/getVideo?uuid=${this.data.id}`
+        // type: this.data.type
       });
 
       let txt = 'Cannot play video';

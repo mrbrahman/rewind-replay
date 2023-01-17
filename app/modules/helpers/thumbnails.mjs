@@ -204,9 +204,20 @@ export function resizeImage(filename, width, height){
   return readStream.pipe(transform);
 }
 
-export function streamVideo(filename){
-  // TODO: use ffmpeg for converting any video to required browser format?
-  const readStream = fs.createReadStream(filename);
+export function streamVideo(uuid, filename){
+  let readStream;
+
+  let webmFile = path.join(
+    config.thumbsDir,
+    ...Array.from(uuid).slice(0,3),
+    uuid+'.webm'
+  );
+
+  if(fs.existsSync(webmFile)){
+    readStream = fs.createReadStream(webmFile);
+  } else {
+    readStream = fs.createReadStream(filename);
+  }
 
   return readStream;
 }
