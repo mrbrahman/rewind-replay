@@ -1,5 +1,7 @@
+import {notify} from './utils.mjs';
+
 class PlSlide extends HTMLElement {
-  #albumname; #data; #screenWidth; #screenHeight; #play;
+  #albumname; #item; #screenWidth; #screenHeight; #play;
 
   constructor() {
     super().attachShadow({mode: 'open'}); // sets "this" and "this.shadowRoot"
@@ -11,15 +13,19 @@ class PlSlide extends HTMLElement {
     );
     
     this.shadowRoot.getElementById('albumname').innerText = this.albumname || '';
-    this.shadowRoot.getElementById('rating').setAttribute('value', this.data.rating || 0);
-    if(this.data.type.startsWith('image')){
+    this.shadowRoot.getElementById('rating').setAttribute('value', this.item.data.rating || 0);
+    
+    this.shadowRoot.getElementById('rating').addEventListener('sl-change', this.#handleRatingChanged);
+
+
+    if(this.item.data.type.startsWith('image')){
       let img = Object.assign(document.createElement('img'), {
-        src: `/getImage?uuid=${this.#data.id}&width=${this.#screenWidth}&height=${this.#screenHeight}`
+        src: `/getImage?uuid=${this.item.data.id}&width=${this.#screenWidth}&height=${this.#screenHeight}`
       });
 
       this.shadowRoot.getElementById('media').appendChild(img);
 
-    } else if (this.data.type.startsWith('video')){
+    } else if (this.item.data.type.startsWith('video')){
       let video = Object.assign(document.createElement('video'), {
         width: this.#screenWidth,
         height: this.#screenHeight,
@@ -29,8 +35,8 @@ class PlSlide extends HTMLElement {
       });
 
       let src = Object.assign(document.createElement('source'), {
-        src: `/getVideo?uuid=${this.data.id}`
-        // type: this.data.type
+        src: `/getVideo?uuid=${this.item.data.id}`
+        // type: this.item.data.type
       });
 
       let txt = 'Cannot play video';
@@ -39,12 +45,49 @@ class PlSlide extends HTMLElement {
       this.shadowRoot.getElementById('media').appendChild(video);
 
     } else {
-      this.shadowRoot.getElementById('media').innerHTML = `<div>${this.data.type} TBD</div>`
+      this.shadowRoot.getElementById('media').innerHTML = `<div>${this.item.data.type} TBD</div>`
     }
   }
 
+  #handleRatingChanged = (evt) => {
+    let item = this.item, newRating = evt.target.value;
+    console.log(item);
+
+    // copied below from pl-album (#changeRatingSelectedItems)
+    // TODO: need to handle in one place and avoid duplication of code
+
+    fetch(`updateRating?uuid=${item.data.id}&newRating=${newRating}`, {method: "PUT"})
+      .then(async (res)=>{
+        let isJson = res.headers.get('content-type')?.includes('application/json');
+        let output = isJson ? await res.json() : null;
+
+        if(!res.ok){
+          return Promise.reject(output.error || res.status+':'+res.statusText)
+        }
+        console.log('updated rating in backend');
+      })
+      // Update in backend successful, now update the UI
+      .then(()=>{
+        // update data
+        item.data.rating = newRating;
+
+        // update element if one was created
+        if(item.elem){
+          // there is no listener on the rating element, so we can 
+          // safely update here
+          item.elem.rating = newRating;
+        }
+      })
+      .catch(err=>{
+        notify(`<strong>Error</strong>:</br>${err}`, 'danger', 'exclamation-octagon', -1);
+
+        // revert rating on screen (extra for this flow)
+        this.shadowRoot.getElementById('rating').value = item.data.rating;
+      });
+  }
+
   #playPauseMedia(){
-    if(this.data.type.startsWith("video")){
+    if(this.item.data.type.startsWith("video")){
       let media = this.shadowRoot.getElementById('media').firstElementChild;
       if(this.play){
         media.play();
@@ -75,11 +118,11 @@ class PlSlide extends HTMLElement {
     return this.#albumname;
   }
 
-  set data(_){
-    this.#data = _;
+  set item(_){
+    this.#item = _;
   }
-  get data(){
-    return this.#data;
+  get item(){
+    return this.#item;
   }
 
   set screenWidth(_){

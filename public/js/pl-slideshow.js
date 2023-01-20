@@ -166,7 +166,7 @@ class PlSlideshow extends HTMLElement {
   #createSlide(idx){
     let slide = Object.assign(document.createElement('pl-slide'), {
       albumname: this.data[idx[0]].album,
-      data: this.data[idx[0]].items[idx[1]].data,
+      item: this.data[idx[0]].items[idx[1]],
       screenWidth: this.#screenWidth,
       screenHeight: this.#screenHeight
     });
