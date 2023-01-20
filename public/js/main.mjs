@@ -18,7 +18,9 @@ import './pl-slideshow.js';
 
 const router = new Navigo('/', {hash: true});
 
-let galleryData = [], prevLink;
+let state = {};
+
+state.collection_id = 1; // until UI is implemented
 
 // found at https://tutorial.eyehunts.com/js/call-javascript-function-on-enter-keypress-in-the-textbox-example-code/
 let searchBox = document.getElementById("nav-search-box");
@@ -46,8 +48,8 @@ function performSearch(){
 
 
 function showGallery(data){
-  galleryData = data;
-  window.galleryData = data;
+  state.galleryData = data;
+  // window.galleryData = data;
   let c = document.getElementById('main-content');
   if(data.length == 0){
     c.innerHTML = "No results found";
@@ -69,7 +71,7 @@ document.getElementById('app').addEventListener('pl-gallery-item-clicked', (evt)
 });
 
 document.getElementById('app').addEventListener('pl-slideshow-closed', ()=>{
-  router.navigate(prevLink[0].url);
+  router.navigate(state.prevLink[0].url);
 });
 
 // 
@@ -84,6 +86,7 @@ router.on('/', function(){
     document.getElementById('main-content').style.opacity = 1;
     return;
   }
+  
 
   fetch('/getAll').then(response=>response.json())
     .then(result=>{
@@ -107,7 +110,7 @@ router.on('/search/:searchText', function(p){
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({collection_id: 1, searchText: p.data.searchText}) // TODO: collection_id -- need to maintain state
+    body: JSON.stringify({collection_id: state.collection_id, searchText: p.data.searchText})
   })
   .then(response=>response.json())
   .then(result=>{
@@ -116,13 +119,13 @@ router.on('/search/:searchText', function(p){
 });
 
 router.on('/slideshow/:startFrom', function(p){
-  prevLink = router.lastResolved();
+  state.prevLink = router.lastResolved();
   
   document.getElementById('nav-header').style.opacity = 0;
   document.getElementById('main-content').style.opacity = 0;
 
   let s = Object.assign(document.createElement('pl-slideshow'), {
-    data: galleryData,
+    data: state.galleryData,
     startFrom: p.data.startFrom,
     buffer: 3
   });
