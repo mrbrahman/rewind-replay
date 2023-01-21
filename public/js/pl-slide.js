@@ -1,7 +1,7 @@
 import {notify} from './utils.mjs';
 
 class PlSlide extends HTMLElement {
-  #albumname; #item; #screenWidth; #screenHeight; #play;
+  #albumname; #item; #screenWidth; #screenHeight; #play; #slideshowMode;
 
   constructor() {
     super().attachShadow({mode: 'open'}); // sets "this" and "this.shadowRoot"
@@ -17,11 +17,18 @@ class PlSlide extends HTMLElement {
     
     this.shadowRoot.getElementById('rating').addEventListener('sl-change', this.#handleRatingChanged);
 
+    this.shadowRoot.getElementById('start-slideshow').addEventListener('click', ()=>{
+      this.dispatchEvent(new Event('pl-start-slideshow', {composed: true, bubbles: true}));
+    });
+
 
     if(this.item.data.type.startsWith('image')){
       let img = Object.assign(document.createElement('img'), {
         src: `/getImage?uuid=${this.item.data.id}&width=${this.#screenWidth}&height=${this.#screenHeight}`
       });
+
+      // let img = document.createElement('img')
+      // img.src = `/getImage?uuid=${this.item.data.id}&width=${this.#screenWidth}&height=${this.#screenHeight}`
 
       this.shadowRoot.getElementById('media').appendChild(img);
 
@@ -125,18 +132,19 @@ class PlSlide extends HTMLElement {
     return this.#item;
   }
 
-  set screenWidth(_){
-    this.#screenWidth = _;
-  }
-  get screenWidth(){
-    return this.#screenWidth;
-  }
+  set screenDimensions([w,h]){
+    this.#screenWidth = w;
+    this.#screenHeight = h;
 
-  set screenHeight(_){
-    this.#screenHeight = +_;
+    if(this.isConnected){
+      let m = this.shadowRoot.getElementById('media').firstElementChild
+      // TODO: update img URL (to fetch new image with updated dimensions)
+      // m.width = w;
+      // m.height = h;
+    }
   }
-  get screenHeight(){
-    return this.#screenHeight;
+  get screenDimensions(){
+    return [this.#screenWidth, this.#screenHeight]
   }
 
   set play(_){
@@ -145,6 +153,23 @@ class PlSlide extends HTMLElement {
   }
   get play(){
     return this.#play;
+  }
+
+  set slideshowMode(_){
+    this.#slideshowMode = Boolean(_);
+
+    if(!this.isConnected){
+      return;
+    }
+    
+    if(this.#slideshowMode){
+      this.shadowRoot.getElementById('container').classList.add('slideshow-mode');
+    } else {
+      this.shadowRoot.getElementById('container').classList.remove('slideshow-mode');
+    }
+  }
+  get slideshowMode(){
+    return this.#slideshowMode;
   }
 
 }

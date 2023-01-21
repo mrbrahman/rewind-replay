@@ -446,6 +446,10 @@
         transform: translate(120vw, 0px);
       }
 
+      #navigation {
+        transition: visibility 0.2s;
+      }
+
     </style>
 
     <div id="container">
@@ -493,6 +497,10 @@
         align-items: center;
       }
 
+      #container.slideshow-mode > :is(#albumname, #actions) {
+        display: none;
+      }
+
       #actions > * {
         padding-left: 5px;
       }
@@ -512,9 +520,23 @@
       <div id="albumname"></div>
       <div id="actions">
         <sl-rating id="rating"></sl-rating>
+        <sl-icon-button id="info" name="info-circle">Info</sl-icon-button>
         <sl-icon-button id="delete" name="trash-fill">Delete</sl-icon-button>
-        <sl-icon-button name="download">Download</sl-icon-button>
-        <sl-icon-button name="three-dots-vertical">More Options</sl-icon-button>
+        <!-- <sl-icon-button name="download">Download</sl-icon-button> -->
+        <sl-dropdown>
+          <sl-icon-button slot="trigger" name="three-dots-vertical">More Options</sl-icon-button>
+          <sl-menu>
+            <sl-menu-item id="start-slideshow">
+              Slideshow
+              <sl-icon slot="suffix" src="assets/slideshow-2-svgrepo-com.svg"></sl-icon>
+            </sl-menu-item>
+
+            <sl-menu-item>
+              Download
+              <sl-icon slot="suffix" name="download"></sl-icon>
+            </sl-menu-item>
+          </sl-menu>
+        </sl-dropdown>
 
       </div>
     </div>

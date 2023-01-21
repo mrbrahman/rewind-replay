@@ -1,6 +1,6 @@
 class PlSlideshow extends HTMLElement {
   #data=[]; #src; #startFrom; #buffer=1; #loop=false;
-  #startIdx=[0,0]; #screenWidth; #screenHeight;
+  #startIdx=[0,0]; #screenWidth; #screenHeight; #slideshowMode=false; #intervalId; #slideDuration=3;
 
   constructor() {
     super().attachShadow({mode: 'open'}); // sets "this" and "this.shadowRoot"
@@ -31,6 +31,7 @@ class PlSlideshow extends HTMLElement {
     slide.classList.add('active');
     slide.dataset.pos = 0;
     slide.dataset.idx = this.#startIdx.toString();
+    slide.slideshowMode = this.#slideshowMode;
     this.shadowRoot.getElementById('slides').append(slide);
     slide.play = true;
 
@@ -72,12 +73,23 @@ class PlSlideshow extends HTMLElement {
 
     this.shadowRoot.getElementById('close').addEventListener('click', this.#slideshowClosed);
 
-    this.shadowRoot.getElementById('next').addEventListener('click', ()=>this.#next())
-    this.shadowRoot.getElementById('prev').addEventListener('click', ()=>this.#prev())
+    this.shadowRoot.getElementById('next').addEventListener('click', ()=>this.#next());
+    this.shadowRoot.getElementById('prev').addEventListener('click', ()=>this.#prev());
+    
+    this.addEventListener('fullscreenchange', this.#slideshowToggle);
+    this.addEventListener('pl-start-slideshow', ()=>{
+      // if (document.fullscreenElement){
+      //   document.exitFullscreen();
+      // } else {
+        this.requestFullscreen();
+      // }
+    });
 
     window.addEventListener('keydown', this.#handleRightArrow);
     window.addEventListener('keydown', this.#handleLeftArrow);
     window.addEventListener('keyup', this.#handleSlideshowEscape);
+
+    // window.addEventListener('resize', this.#handleResize);
 
     // conditionally enable prev and next
 
@@ -91,6 +103,31 @@ class PlSlideshow extends HTMLElement {
     if(!this.shadowRoot.getElementById('slides').querySelector('[data-pos="1"]')){
       this.shadowRoot.getElementById('next').style.display = 'none';
       window.removeEventListener('keydown', this.#handleRightArrow);
+    }
+  }
+
+  #slideshowToggle = () => {
+    if(document.fullscreenElement){
+      this.#slideshowMode = true;
+      this.shadowRoot.getElementById('navigation').style.visibility = 'hidden';
+      
+      let slide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="0"]');
+      slide.slideshowMode = true;
+      this.#intervalId = setInterval(()=>{
+        if(this.shadowRoot.getElementById('slides').querySelector('[data-pos="1"]')){
+          this.#next()
+        } else {
+          clearInterval(this.#intervalId);
+        }
+      }, this.#slideDuration*1000);
+
+    } else {
+      this.#slideshowMode = false;
+      this.shadowRoot.getElementById('navigation').style.visibility = 'visible';
+
+      let slide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="0"]');
+      slide.slideshowMode = false;
+      clearInterval(this.#intervalId);
     }
   }
 
@@ -167,8 +204,7 @@ class PlSlideshow extends HTMLElement {
     let slide = Object.assign(document.createElement('pl-slide'), {
       albumname: this.data[idx[0]].album,
       item: this.data[idx[0]].items[idx[1]],
-      screenWidth: this.#screenWidth,
-      screenHeight: this.#screenHeight
+      screenDimensions: [this.#screenWidth, this.#screenHeight]
     });
     return slide;
   }
@@ -183,6 +219,7 @@ class PlSlideshow extends HTMLElement {
     let nextSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="1"]');
     nextSlide.classList.add('active');
     nextSlide.classList.remove('right');
+    nextSlide.slideshowMode = this.#slideshowMode;
     nextSlide.play = true;
 
     // now make DOM changes that are not visibile to the user
@@ -239,10 +276,11 @@ class PlSlideshow extends HTMLElement {
     activeSlide.classList.add('right');
     activeSlide.classList.remove('active');
 
-    let nextSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="-1"]');
-    nextSlide.classList.add('active');
-    nextSlide.classList.remove('left');
-    nextSlide.play = true;
+    let prevSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="-1"]');
+    prevSlide.classList.add('active');
+    prevSlide.classList.remove('left');
+    prevSlide.slideshowMode = this.#slideshowMode;
+    prevSlide.play = true;
 
     // now make DOM changes that are not visibile to the user
     for(let i=this.buffer; i>=-this.buffer; i--){
