@@ -2,6 +2,15 @@ class PlSlideshow extends HTMLElement {
   #data=[]; #src; #startFrom; #buffer=1; #loop=false;
   #startIdx=[0,0]; #screenWidth; #screenHeight; #slideshowMode=false; #intervalId; #slideDuration=3;
 
+  // TODO
+  // disable interval for videos and instead listen to video end
+  // slideshow pause button, exit button
+  // ability to change slide duration in slideshow mode
+  // mouseover features (TBD what to show?)
+  // lock feature (need a new component for keypad)
+  // general cleanup of code, naming of functions, route params etc
+  // change URL when item is shown (/item/<uuid>) without putting in history
+
   constructor() {
     super().attachShadow({mode: 'open'}); // sets "this" and "this.shadowRoot"
   }
