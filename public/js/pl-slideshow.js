@@ -97,7 +97,6 @@ class PlSlideshow extends HTMLElement {
     window.addEventListener('keydown', this.#handleRightArrow);
     window.addEventListener('keydown', this.#handleLeftArrow);
     window.addEventListener('keyup', this.#handleSlideshowEscape);
-
     // window.addEventListener('resize', this.#handleResize);
 
     // conditionally enable prev and next
@@ -357,7 +356,7 @@ class PlSlideshow extends HTMLElement {
     window.removeEventListener('keydown', this.#handleRightArrow);
     window.removeEventListener('keydown', this.#handleLeftArrow);
     window.removeEventListener('keyup', this.#handleSlideshowEscape);
-    window.removeEventListener('resize', this.#handleResize);
+    // window.removeEventListener('resize', this.#handleResize);
   }
 
   attributeChangedCallback(name, oldVal, newVal) {

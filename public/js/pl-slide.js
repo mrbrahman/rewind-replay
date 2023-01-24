@@ -21,7 +21,6 @@ class PlSlide extends HTMLElement {
       this.dispatchEvent(new Event('pl-start-slideshow', {composed: true, bubbles: true}));
     });
 
-
     if(this.item.data.type.startsWith('image')){
       let img = Object.assign(document.createElement('img'), {
         src: `/getImage?uuid=${this.item.data.id}&width=${this.#screenWidth}&height=${this.#screenHeight}`
@@ -163,9 +162,12 @@ class PlSlide extends HTMLElement {
     }
     
     if(this.#slideshowMode){
-      this.shadowRoot.getElementById('container').classList.add('slideshow-mode');
+      this.shadowRoot.getElementById('albumname').classList.add('hidden');
+      this.shadowRoot.getElementById('actions').classList.add('hidden');
+
     } else {
-      this.shadowRoot.getElementById('container').classList.remove('slideshow-mode');
+      this.shadowRoot.getElementById('albumname').classList.remove('hidden');
+      this.shadowRoot.getElementById('actions').classList.remove('hidden');
     }
   }
   get slideshowMode(){
