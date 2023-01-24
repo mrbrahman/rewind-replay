@@ -140,11 +140,27 @@ class PlSlideshow extends HTMLElement {
     }
   }
 
+  // #handleResize = (evt) => {
+  //   this.#screenWidth  = document.documentElement.clientWidth;
+  //   this.#screenHeight = document.documentElement.clientHeight;
+
+  //   for(let i=-this.buffer; i<=this.buffer; i++){
+  //     let slide = this.shadowRoot.getElementById('slides').querySelector(`[data-pos="${i}"]`);
+  //     if(slide){
+  //       slide.setDimensions = [this.#screenWidth, this.#screenHeight];
+  //     }
+  //   }
+  // }
+
   #handleSlideshowEscape = (evt) =>{
     if(evt.key == "Escape"){
       this.#slideshowClosed();
+    // } else if(evt.key == "A" || evt.key == "a"){
+    //   // toggle album name
+    //   console.log('pl-slieshow a or A pressed')
     } else {
       // ignore all other keys
+      // console.log(evt.key)
     }
   }
 
@@ -340,6 +356,8 @@ class PlSlideshow extends HTMLElement {
   disconnectedCallback() {
     window.removeEventListener('keydown', this.#handleRightArrow);
     window.removeEventListener('keydown', this.#handleLeftArrow);
+    window.removeEventListener('keyup', this.#handleSlideshowEscape);
+    window.removeEventListener('resize', this.#handleResize);
   }
 
   attributeChangedCallback(name, oldVal, newVal) {
