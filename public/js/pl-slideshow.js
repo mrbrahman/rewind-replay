@@ -116,18 +116,16 @@ class PlSlideshow extends HTMLElement {
 
   #slideshowToggle = () => {
     if(document.fullscreenElement){
+      // start slideshow
+
+      // change the state of this (pl-slideshow) element
       this.#slideshowMode = true;
       this.shadowRoot.getElementById('navigation').style.visibility = 'hidden';
       
+      // now initiate changes to the current slide being shown, and start slideshow
       let slide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="0"]');
       slide.slideshowMode = true;
-      this.#intervalId = setInterval(()=>{
-        if(this.shadowRoot.getElementById('slides').querySelector('[data-pos="1"]')){
-          this.#next()
-        } else {
-          clearInterval(this.#intervalId);
-        }
-      }, this.#slideDuration*1000);
+      this.#startTimer();
 
     } else {
       this.#slideshowMode = false;
@@ -135,8 +133,28 @@ class PlSlideshow extends HTMLElement {
 
       let slide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="0"]');
       slide.slideshowMode = false;
-      clearInterval(this.#intervalId);
+      this.#stopTimer();
     }
+  }
+
+  #startTimer() {
+    this.#intervalId = setInterval(()=>{
+      if(this.shadowRoot.getElementById('slides').querySelector('[data-pos="1"]')){
+        this.#next()
+      } else {
+        // this.#stopTimer();
+        document.exitFullscreen();
+      }
+    }, this.#slideDuration*1000);
+  }
+
+  #stopTimer() {
+    clearInterval(this.#intervalId);
+  }
+
+  #resetTimer() {
+    this.#stopTimer();
+    this.#startTimer();
   }
 
   // #handleResize = (evt) => {
@@ -171,6 +189,11 @@ class PlSlideshow extends HTMLElement {
   #handleRightArrow = (evt)=>{
     if(evt.key == "ArrowRight"){
       this.#next();
+
+      // if slideshowmode, reset timer
+      if(this.#slideshowMode){
+        this.#resetTimer();
+      }
     } else {
       // ignore
     }
@@ -179,6 +202,11 @@ class PlSlideshow extends HTMLElement {
   #handleLeftArrow = (evt)=>{
     if(evt.key == "ArrowLeft"){
       this.#prev();
+
+      // if slideshowmode, reset timer
+      if(this.#slideshowMode){
+        this.#resetTimer();
+      }
     } else {
       // ignore
     }
@@ -230,6 +258,7 @@ class PlSlideshow extends HTMLElement {
       item: this.data[idx[0]].items[idx[1]],
       screenDimensions: [this.#screenWidth, this.#screenHeight]
     });
+
     return slide;
   }
 
@@ -350,6 +379,7 @@ class PlSlideshow extends HTMLElement {
       this.shadowRoot.getElementById('next').style.display = 'block';
       window.addEventListener('keydown', this.#handleRightArrow);
     }
+    
   }
 
   disconnectedCallback() {
