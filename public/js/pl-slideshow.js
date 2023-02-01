@@ -3,7 +3,6 @@ class PlSlideshow extends HTMLElement {
   #startIdx=[0,0]; #screenWidth; #screenHeight; #slideshowMode=false; #intervalId; #slideDuration=3;
 
   // TODO
-  // disable interval for videos and instead listen to video end
   // slideshow pause button, exit button
   // ability to change slide duration in slideshow mode
   // mouseover features (TBD what to show?)
@@ -42,7 +41,9 @@ class PlSlideshow extends HTMLElement {
     slide.dataset.idx = this.#startIdx.toString();
     slide.slideshowMode = this.#slideshowMode;
     this.shadowRoot.getElementById('slides').append(slide);
-    slide.play = true;
+    if(slide.dataset.type.startsWith('video')){
+      slide.play = true;
+    }
 
 
     // paint subsequent slides first (assume the default direction is ltr)
@@ -93,6 +94,13 @@ class PlSlideshow extends HTMLElement {
         this.requestFullscreen();
       // }
     });
+
+    this.addEventListener('pl-slideshow-video-ended', ()=>{
+      if(this.shadowRoot.getElementById('slides').querySelector('[data-pos="1"')){
+        this.#next();
+        this.#startTimer();
+      }
+    })
 
     window.addEventListener('keydown', this.#handleRightArrow);
     window.addEventListener('keydown', this.#handleLeftArrow);
@@ -259,13 +267,17 @@ class PlSlideshow extends HTMLElement {
       screenDimensions: [this.#screenWidth, this.#screenHeight]
     });
 
+    slide.dataset.type = this.data[idx[0]].items[idx[1]].data.type;
+
     return slide;
   }
 
   #next(){
     // first make DOM changes visible to user
     let activeSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="0"]');
-    activeSlide.play = false;
+    if(activeSlide.dataset.type.startsWith('video')){
+      activeSlide.play = false;
+    }
     activeSlide.classList.add('left');
     activeSlide.classList.remove('active');
 
@@ -273,7 +285,13 @@ class PlSlideshow extends HTMLElement {
     nextSlide.classList.add('active');
     nextSlide.classList.remove('right');
     nextSlide.slideshowMode = this.#slideshowMode;
-    nextSlide.play = true;
+
+    if(nextSlide.dataset.type.startsWith('video')){
+      nextSlide.play = true;
+      if(this.#slideshowMode){
+        this.#stopTimer();
+      }
+    }
 
     // now make DOM changes that are not visibile to the user
     for(let i=-this.buffer; i<=this.buffer; i++){
@@ -325,7 +343,9 @@ class PlSlideshow extends HTMLElement {
   #prev(){
     // first make DOM changes visible to user
     let activeSlide = this.shadowRoot.getElementById('slides').querySelector('[data-pos="0"]');
-    activeSlide.play = false;
+    if(activeSlide.dataset.type.startsWith('video')){
+      activeSlide.play = false;
+    }
     activeSlide.classList.add('right');
     activeSlide.classList.remove('active');
 
@@ -333,7 +353,9 @@ class PlSlideshow extends HTMLElement {
     prevSlide.classList.add('active');
     prevSlide.classList.remove('left');
     prevSlide.slideshowMode = this.#slideshowMode;
-    prevSlide.play = true;
+    if(prevSlide.dataset.type.startsWith('video')){
+      prevSlide.play = true;
+    }
 
     // now make DOM changes that are not visibile to the user
     for(let i=this.buffer; i>=-this.buffer; i--){
@@ -379,7 +401,7 @@ class PlSlideshow extends HTMLElement {
       this.shadowRoot.getElementById('next').style.display = 'block';
       window.addEventListener('keydown', this.#handleRightArrow);
     }
-    
+
   }
 
   disconnectedCallback() {
