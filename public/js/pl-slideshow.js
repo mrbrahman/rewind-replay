@@ -97,8 +97,8 @@ class PlSlideshow extends HTMLElement {
 
     this.addEventListener('pl-slideshow-video-ended', ()=>{
       if(this.shadowRoot.getElementById('slides').querySelector('[data-pos="1"')){
-        this.#next();
         this.#startTimer();
+        this.#next();
       }
     })
 
