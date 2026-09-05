@@ -50,22 +50,36 @@ input[type="checkbox"] {
   display: none;
 }
 
+/* Enlarged, transparent hit area anchored to the top-left corner so the
+   selection toggle is easy to tap on touch devices. The visual circle is
+   drawn by label:before (24px) and stays in the corner; the label itself is
+   a 44px touch target (standard minimum) sitting over the image corner. */
+label {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 44px;
+  height: 44px;
+  z-index: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 label:before {
   content: "";
   display: block;
   position: absolute;
   top: 5px;
   left: 5px;
-  width: 21px;
-  height: 21px;
+  width: 24px;
+  height: 24px;
   background-size: contain;
   background-repeat: no-repeat;
   /* Bootstrap Icons: circle (white) */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 16 16'%3E%3Cpath d='M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16'/%3E%3C/svg%3E");
   transition: transform 0.3s;
-  z-index: 1;
-  pointer-events: auto;
-  cursor: pointer;
+  pointer-events: none;
 }
 
 :checked + label:before {
