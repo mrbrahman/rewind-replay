@@ -3,6 +3,18 @@ import sheet from "./styles/pl-thumb.css" with { type: "css" };
 class PlThumb extends HTMLElement {
   // instance variables
   #width; #height; #rating=0; #selected=false; #type; #dur; #hasGps; #hasDesc; #hasTags;
+
+  // Long-press-to-select state. #longPressTimer is the pending hold timer,
+  // #longPressStart is the pointerdown coordinate (for the move-cancel check),
+  // and #suppressNextClick swallows the click that follows a completed press
+  // so it does not also open the slideshow.
+  #longPressTimer = null; #longPressStart = null; #suppressNextClick = false;
+
+  // Drag-select sweep state on this thumb. #activePointerId is the pointer to
+  // capture/release; #sweeping is true from the moment the long-press arms
+  // until pointerup/cancel, during which we preventDefault moves so the
+  // browser does not abort the gesture with pointercancel.
+  #activePointerId = null; #sweeping = false;
   
   #dppx = parseFloat(window.devicePixelRatio.toFixed(2));
   
@@ -98,8 +110,22 @@ class PlThumb extends HTMLElement {
       .addEventListener('click', this.#handleSelection)
     ;
 
-    this.shadowRoot.querySelector('img').addEventListener('click', ()=>{
-      console.log('item clicked');
+    let img = this.shadowRoot.querySelector('img');
+
+    // Disable the browser's native image drag-and-drop. Without this, a
+    // press-and-drag with a mouse starts an image drag, which fires
+    // pointercancel and kills the drag-select sweep before it can follow the
+    // pointer.
+    img.draggable = false;
+    img.addEventListener('dragstart', (evt)=> evt.preventDefault());
+
+    img.addEventListener('click', ()=>{
+      // A long-press toggles selection and sets this flag so the click that
+      // the browser fires on pointerup does not also open the slideshow.
+      if(this.#suppressNextClick){
+        this.#suppressNextClick = false;
+        return;
+      }
       let clickEvent = new CustomEvent('pl-gallery-item-clicked', {
         composed: true, 
         bubbles: true, 
@@ -109,6 +135,125 @@ class PlThumb extends HTMLElement {
       this.dispatchEvent(clickEvent);
     })
 
+    // Long-press to toggle selection (all pointer types). A normal tap still
+    // opens the slideshow; only a 500ms hold that stays within 10px selects.
+    // This gives a large, easy-to-hit selection gesture in addition to the
+    // corner checkbox, without hijacking the tap-to-open-slideshow behavior.
+    img.addEventListener('pointerdown', this.#handlePointerDown);
+    img.addEventListener('pointermove', this.#handlePointerMove);
+    img.addEventListener('pointerup', this.#cancelLongPress);
+    img.addEventListener('pointercancel', this.#cancelLongPress);
+    // Belt-and-braces scroll suppression for touch: unlike pointermove (which
+    // Chrome ignores preventDefault on for scrolling), a non-passive touchmove
+    // preventDefault DOES stop scroll on Chrome Android. Only active while a
+    // sweep is armed so normal swipe-to-scroll on a thumb is unaffected.
+    img.addEventListener('touchmove', this.#handleTouchMove, { passive: false });
+    // Suppress the native long-press context menu / image "save" popup on the
+    // thumb so it does not fight the long-press-to-select gesture.
+    img.addEventListener('contextmenu', (evt)=> evt.preventDefault());
+
+  }
+
+  #handlePointerDown = (evt)=>{
+    // Start each interaction fresh: if a prior long-press set the suppress
+    // flag but no click ever arrived to clear it, don't let it swallow this
+    // new tap.
+    this.#suppressNextClick = false;
+    this.#longPressStart = { x: evt.clientX, y: evt.clientY };
+    this.#activePointerId = evt.pointerId;
+    this.#longPressTimer = setTimeout(()=>{
+      this.#longPressTimer = null;
+      this.#toggleSelectionViaLongPress();
+    }, 500);
+  }
+
+  #handleTouchMove = (evt)=>{
+    // Only suppress scroll once a sweep is armed. cancelable is false if the
+    // browser already committed to scrolling; guard to avoid the console warn.
+    if(this.#sweeping && evt.cancelable){
+      evt.preventDefault();
+    }
+  }
+
+  #handlePointerMove = (evt)=>{
+    // Once a sweep is armed, this img holds the (implicit) pointer capture, so
+    // it keeps receiving moves. We must preventDefault them, otherwise the
+    // browser reinterprets the button-held drag as a pan/scroll and fires
+    // pointercancel, killing the gallery's drag-select sweep. The events still
+    // bubble to the gallery for cross-thumb hit-testing.
+    if(this.#sweeping){
+      evt.preventDefault();
+      return;
+    }
+    if(this.#longPressTimer == null || this.#longPressStart == null) return;
+    let dx = evt.clientX - this.#longPressStart.x;
+    let dy = evt.clientY - this.#longPressStart.y;
+    // Cancel if the pointer moves more than 10px (i.e. the user is scrolling
+    // or dragging, not holding).
+    if(dx*dx + dy*dy > 100){
+      this.#cancelLongPress();
+    }
+  }
+
+  #cancelLongPress = ()=>{
+    if(this.#longPressTimer != null){
+      clearTimeout(this.#longPressTimer);
+      this.#longPressTimer = null;
+    }
+    this.#longPressStart = null;
+    // End sweep bookkeeping on this thumb and release capture.
+    if(this.#sweeping){
+      this.#sweeping = false;
+      let img = this.shadowRoot.querySelector('img');
+      if(img){
+        img.style.touchAction = '';
+        if(this.#activePointerId != null){
+          try { img.releasePointerCapture(this.#activePointerId); } catch(e){ /* already released */ }
+        }
+      }
+    }
+    this.#activePointerId = null;
+  }
+
+  // Fired when the hold timer completes. Flip the checkbox state and reuse
+  // the exact same selection path as a checkbox click so pl-album / pl-gallery
+  // see an identical r3-item-selected event.
+  #toggleSelectionViaLongPress = ()=>{
+    this.#longPressStart = null;
+    let chk = this.shadowRoot.querySelector('input[type="checkbox"]');
+    if(!chk) return;
+    chk.checked = !chk.checked;
+    // Swallow the click the browser dispatches on pointerup so it does not
+    // also open the slideshow.
+    this.#suppressNextClick = true;
+    this.selected = chk.checked; // calls the setter
+    this.dispatchEvent(new CustomEvent('r3-item-selected', {composed: true, bubbles: true}));
+
+    // Arm drag-select. Capture the pointer on the img so subsequent moves stay
+    // targeted here (they still bubble to the gallery for hit-testing). Set
+    // touch-action:none on the IMG itself (not an ancestor): for touch, Chrome
+    // governs scroll-takeover by the captured element's own touch-action and
+    // ignores preventDefault on pointermove. Because the long-press required
+    // the finger to stay within 10px for 500ms, no scroll has started yet, so
+    // flipping to none now takes effect for this gesture and stops the
+    // pointercancel that was aborting the sweep.
+    this.#sweeping = true;
+    let img = this.shadowRoot.querySelector('img');
+    if(img){
+      img.style.touchAction = 'none';
+      if(this.#activePointerId != null){
+        try { img.setPointerCapture(this.#activePointerId); } catch(e){ /* ignore */ }
+      }
+    }
+
+    // Tell the gallery a long-press just completed so it can begin a sweep.
+    // anchorSelected is the resulting state of this item; the sweep paints
+    // that same state onto items the finger passes over (apply-anchor-state,
+    // not per-item toggle).
+    this.dispatchEvent(new CustomEvent('pl-thumb-longpress-armed', {
+      composed: true, bubbles: true,
+      detail: { id: this.id, anchorSelected: this.selected }
+    }));
   }
 
   #handleSelection = (evt)=>{
