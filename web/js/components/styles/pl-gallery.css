@@ -26,6 +26,13 @@
   display: none;
 }
 
+/* While a drag-select sweep is active, disable native scrolling/gestures so
+   the pointer can follow thumbs without the gallery scrolling underneath.
+   Toggled by pl-gallery adding/removing the .sweeping class. */
+#gallery.sweeping {
+  touch-action: none;
+}
+
 pl-day-section {
   width: 100%;
 }

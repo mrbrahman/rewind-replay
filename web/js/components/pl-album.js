@@ -153,6 +153,34 @@ class PlAlbum extends HTMLElement {
       }
     }) );
   }
+
+  // Set the selection state of a single item by id (used by the gallery's
+  // drag-select sweep). Idempotent: if the item is already in the target
+  // state, does nothing and returns false (so the gallery does not
+  // double-count). On a real change, syncs layout.selected + the thumb
+  // element, updates the album indicator, dispatches the same
+  // pl-album-item-selected event as a checkbox click, and returns true.
+  setItemSelectedById(id, selected){
+    let item = this.data.find(x=>x.data.id==id);
+    if(!item) return false;
+    if(!!item.layout.selected === !!selected) return false; // no change
+
+    item.layout.selected = selected;
+    // Update the live thumb element if it is currently painted (setting
+    // .selected does not fire an event, per pl-thumb's setter contract).
+    if(item.elem) item.elem.selected = selected;
+
+    this.#updateAlbumSelect();
+
+    this.dispatchEvent( new CustomEvent('pl-album-item-selected', {
+      detail: {
+        selectAlbum: this.shadowRoot.querySelector('pl-album-name').albumName,
+        selected: selected,
+        selectedItems: [item]
+      }
+    }) );
+    return true;
+  }
   
   #deleteItem(itemIdx){
     // if an item from this album is deleted, 

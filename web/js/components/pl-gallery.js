@@ -36,6 +36,21 @@ class PlGallery extends HTMLElement {
   #albumsInBuffer = {};        // album.id -> 'full' | 'partial' | 'buffer-overflow'
   #albumsSelectedCnt = {};     // album_name -> count
   #itemsSelected = [];         // selected items across all albums
+  // Parallel set of selected item ids, kept in sync with #itemsSelected. Used
+  // only for O(1) duplicate detection so the per-event bookkeeping stays O(k)
+  // in the number of newly (de)selected items rather than O(n) in the whole
+  // selection -- which matters for large drag-select sweeps that fire one
+  // selection event per item. #itemsSelected remains the source of truth for
+  // every other read (map/every/filter/length), so those are unchanged.
+  //
+  // TODO: this Set is redundant with the ids already in #itemsSelected -- it
+  // exists purely as an O(1) lookup index and must be kept in sync at every
+  // mutation point (add/remove/reset), which is a maintenance hazard. The
+  // cleaner end state is to make the selection itself a Map<id, item> (source
+  // of truth, O(1) lookup + add/remove, nothing to keep in sync) and update
+  // the ~22 array-style reads of #itemsSelected accordingly. Deferred to keep
+  // this change minimal; do the Map conversion later.
+  #selectedIds = new Set();
 
   // public properties
   #mode = 'default';
@@ -61,6 +76,37 @@ class PlGallery extends HTMLElement {
   // Set during scrub (pill drag). Prevents album painting while the user
   // is dragging fast. Cleared on scrub end, which triggers a final paint.
   #isScrubbing = false;
+
+  // Drag-select sweep state. Armed by a pl-thumb long-press. The sweep selects
+  // the range of items between the anchor and the item currently under the
+  // pointer, in gallery/timeline order (reading order across albums and days),
+  // recomputed live so overshoot-then-pullback reverts correctly.
+  //   #sweepOrder    - flat [{ album, item, id }] in gallery order (built at arm)
+  //   #sweepIndexById- id -> index into #sweepOrder
+  //   #sweepAnchorIdx- index of the long-pressed anchor item
+  //   #sweepApply    - selection state to paint across the range (anchor state)
+  //   #sweepBaseline - id -> pre-sweep selected state, to restore on shrink
+  //   #sweepRange    - currently applied [lo, hi] (inclusive) or null
+  #isSweeping = false;
+  #sweepOrder = null;
+  #sweepIndexById = null;
+  #sweepAnchorIdx = -1;
+  #sweepApply = false;
+  #sweepBaseline = null;
+  #sweepRange = null;
+
+  // Edge auto-scroll during a sweep. When the pointer sits near the top/bottom
+  // of the gallery viewport we scroll on an rAF loop (independent of
+  // pointermove, which stops firing when the finger is still) and re-run the
+  // range computation against the last known pointer position each tick, so
+  // the selection keeps extending as content slides under the finger.
+  //   #sweepLastX/Y   - last pointer viewport coords (updated on pointermove)
+  //   #autoScrollRaf  - pending rAF id, or null when the loop is stopped
+  //   #autoScrollVel  - signed px/frame (negative = up, positive = down, 0 = off)
+  #sweepLastX = 0;
+  #sweepLastY = 0;
+  #autoScrollRaf = null;
+  #autoScrollVel = 0;
 
   // Number of viewport-heights above and below to pre-paint thumbnails.
   // Higher = smoother normal scroll (more pre-fetched), lower = fewer
@@ -216,6 +262,11 @@ class PlGallery extends HTMLElement {
 
     galleryEl.addEventListener('scroll', this.#handleScroll);
     galleryEl.addEventListener('scrollend', this.#handleScrollEnd);
+    // Drag-select: a long-press on a thumb arms a sweep. The sweep itself is
+    // coordinated here (not per-thumb) because on touch the pointer events
+    // stay targeted at the thumb where the press began, so following the
+    // finger across thumbs requires gallery-level hit-testing.
+    this.addEventListener('pl-thumb-longpress-armed', this.#handleLongPressArmed);
     this.shadowRoot.getElementById('next-album-btn').addEventListener('click', this.#scrollToNextAlbum);
     this.shadowRoot.getElementById('prev-album-btn').addEventListener('click', this.#scrollToPrevAlbum);
     window.addEventListener('resize', this.#throttleHandleResize);
@@ -324,15 +375,17 @@ class PlGallery extends HTMLElement {
 
     if (selected) {
       this.#albumsSelectedCnt[selectAlbum] = (this.#albumsSelectedCnt[selectAlbum] || 0) + selectedItems.length;
-      this.#itemsSelected.push(...selectedItems);
 
-      // Detect duplicates early - warn immediately so the user knows before
-      // attempting a move. This helps diagnose the root cause.
-      let existingIds = new Set();
+      // Detect duplicates against the id set (O(k), not an O(n) rescan of the
+      // whole selection). Add non-duplicates to both the array and the set.
       let dups = [];
-      for (let item of this.#itemsSelected) {
-        if (existingIds.has(item.data.id)) dups.push(item.data.id);
-        else existingIds.add(item.data.id);
+      for (let item of selectedItems) {
+        if (this.#selectedIds.has(item.data.id)) {
+          dups.push(item.data.id);
+        } else {
+          this.#selectedIds.add(item.data.id);
+          this.#itemsSelected.push(item);
+        }
       }
       if (dups.length > 0) {
         let dupShort = dups.map(id => id.slice(0, 8)).join(', ');
@@ -348,9 +401,9 @@ class PlGallery extends HTMLElement {
       }
     } else {
       this.#albumsSelectedCnt[selectAlbum] -= selectedItems.length;
-      this.#itemsSelected = this.#itemsSelected.filter(a =>
-        !selectedItems.find(b => a.data.id === b.data.id)
-      );
+      let removeIds = new Set(selectedItems.map(b => b.data.id));
+      this.#itemsSelected = this.#itemsSelected.filter(a => !removeIds.has(a.data.id));
+      for (let id of removeIds) this.#selectedIds.delete(id);
     }
 
     if (this.#itemsSelected.length > 0) {
@@ -520,6 +573,7 @@ class PlGallery extends HTMLElement {
   
   #removeGalleryControls = () => {
     this.#itemsSelected = [];
+    this.#selectedIds.clear();
     this.#albumsSelectedCnt = {};
     let c = this.shadowRoot.querySelector('pl-gallery-controls');
     if (c) c.remove();
@@ -810,6 +864,277 @@ class PlGallery extends HTMLElement {
     this.#updateNavBtnState();
   }
 
+  // --- Drag-select sweep -------------------------------------------------
+  // Armed by a pl-thumb long-press. We then follow the pointer across thumbs
+  // (via coordinate hit-testing against the layout geometry we already have)
+  // and paint the anchor's selection state onto each newly-entered item.
+
+  #handleLongPressArmed = (evt) => {
+    let { id, anchorSelected } = evt.detail || {};
+    if (id == null) return;
+
+    // Build the flat gallery/timeline order once for this sweep, and snapshot
+    // each item's pre-sweep selection so shrinking the range can restore it.
+    this.#sweepOrder = [];
+    this.#sweepIndexById = new Map();
+    this.#sweepBaseline = new Map();
+    for (let section of this.#daySections) {
+      for (let album of section.albums) {
+        for (let item of album.data) {
+          let idStr = String(item.data.id);
+          this.#sweepIndexById.set(idStr, this.#sweepOrder.length);
+          this.#sweepOrder.push({ album, item, id: idStr });
+          this.#sweepBaseline.set(idStr, !!item.layout.selected);
+        }
+      }
+    }
+
+    this.#sweepAnchorIdx = this.#sweepIndexById.get(String(id));
+    if (this.#sweepAnchorIdx == null || this.#sweepAnchorIdx < 0) {
+      // Anchor not found (shouldn't happen) - abort cleanly.
+      this.#sweepOrder = this.#sweepIndexById = this.#sweepBaseline = null;
+      return;
+    }
+    // The anchor's baseline is its state BEFORE the long-press toggled it, so
+    // that if the range ever collapses we don't fight the thumb's own toggle.
+    // The thumb already applied anchorSelected to the anchor; treat that as the
+    // paint value and keep the anchor always in-range.
+    this.#sweepApply = !!anchorSelected;
+    this.#sweepBaseline.set(String(id), !anchorSelected);
+    this.#isSweeping = true;
+    this.#sweepRange = [this.#sweepAnchorIdx, this.#sweepAnchorIdx];
+
+    let galleryEl = this.shadowRoot.getElementById('gallery');
+    if (!galleryEl) return;
+    // Suppress native scroll while sweeping. The move listener is non-passive
+    // (preventDefault). Scroll suppression is reliable because the long-press
+    // required the finger to stay within 10px, so no scroll has begun. The
+    // heavy lifting for touch is done on the thumb img (touch-action:none +
+    // touchmove preventDefault); this is a secondary guard.
+    galleryEl.classList.add('sweeping');
+    galleryEl.addEventListener('pointermove', this.#handleSweepMove, { passive: false });
+    galleryEl.addEventListener('pointerup', this.#handleSweepEnd);
+    galleryEl.addEventListener('pointercancel', this.#handleSweepEnd);
+  }
+
+  #handleSweepMove = (evt) => {
+    if (!this.#isSweeping) return;
+    // Prevent the gallery from scrolling during the sweep.
+    evt.preventDefault();
+
+    // Cache the pointer so the auto-scroll loop can re-hit-test while the
+    // finger is held still at an edge.
+    this.#sweepLastX = evt.clientX;
+    this.#sweepLastY = evt.clientY;
+
+    this.#updateSweepRangeAt(evt.clientX, evt.clientY);
+    this.#updateAutoScroll(evt.clientY);
+  }
+
+  // Hit-test the item at (x, y) and grow/shrink the selected range to span
+  // anchor..current in timeline order. Shared by pointermove and the
+  // auto-scroll tick. No-op if no item is under the point.
+  #updateSweepRangeAt(x, y) {
+    let hit = this.#itemAtPoint(x, y);
+    if (!hit) return;
+
+    let curIdx = this.#sweepIndexById.get(String(hit.item.data.id));
+    if (curIdx == null) return;
+
+    // Desired inclusive range between anchor and the item under the pointer,
+    // in timeline order (works in both directions).
+    let lo = Math.min(this.#sweepAnchorIdx, curIdx);
+    let hi = Math.max(this.#sweepAnchorIdx, curIdx);
+
+    let [prevLo, prevHi] = this.#sweepRange;
+    if (lo === prevLo && hi === prevHi) return; // no change
+
+    this.#applyRangeDiff(prevLo, prevHi, lo, hi);
+    this.#sweepRange = [lo, hi];
+  }
+
+  // Decide the auto-scroll velocity from how deep the pointer is inside the
+  // top/bottom edge band, and start/stop the rAF loop accordingly.
+  // Effective top of the sweep-usable area: the gallery's top, pushed down
+  // below the selection controls bar (fixed at the top of the viewport) when
+  // present, plus the sticky day + album headers that pin at the top of the
+  // scroll area and cover the top rows. This keeps the upward auto-scroll zone
+  // and edge hit-testing out from behind all of those overlays.
+  //
+  // The header heights are fixed in CSS: the day header is 36px
+  // (pl-day-section.css) and the album-name header is 36px (pl-album.css,
+  // mirrored by #album_name_height). Kept as a constant here in sync with
+  // those, matching how pl-album already hardcodes 36.
+  #sweepStickyHeaderHeight = 72; // day header (36) + album header (36)
+
+  #sweepTopEdge(galleryRect) {
+    let topEdge = galleryRect.top;
+    let controls = this.shadowRoot.querySelector('pl-gallery-controls');
+    if (controls) {
+      let cRect = controls.getBoundingClientRect();
+      if (cRect.height > 0) topEdge = Math.max(topEdge, cRect.bottom);
+    }
+    // Clear the sticky day + album headers pinned below the controls bar.
+    return topEdge + this.#sweepStickyHeaderHeight;
+  }
+
+  #updateAutoScroll(py) {
+    let gallery = this.shadowRoot.getElementById('gallery');
+    if (!gallery) return;
+    let rect = gallery.getBoundingClientRect();
+
+    // The selection controls bar (fixed at viewport top) and the sticky day +
+    // album headers overlay the top of the gallery. Treat the effective top
+    // edge as below all of them so the upward auto-scroll zone starts where
+    // content is actually visible, not hidden behind those overlays.
+    let topEdge = this.#sweepTopEdge(rect);
+
+    // Edge band: ~12% of viewport height, at least 48px.
+    let band = Math.max(48, rect.height * 0.12);
+    let maxVel = 24, minVel = 4;
+
+    let vel = 0;
+    let topDist = py - topEdge;               // distance below the effective top edge
+    let bottomDist = rect.bottom - py;        // distance above the bottom edge
+
+    if (topDist < band) {
+      // Deeper into the band (smaller topDist) => faster. Ramp min..max.
+      let depth = Math.min(1, Math.max(0, (band - topDist) / band));
+      vel = -(minVel + (maxVel - minVel) * depth);
+    } else if (bottomDist < band) {
+      let depth = Math.min(1, Math.max(0, (band - bottomDist) / band));
+      vel = minVel + (maxVel - minVel) * depth;
+    }
+
+    this.#autoScrollVel = vel;
+
+    if (vel !== 0) {
+      this.#ensureAutoScrollLoop();
+    } else if (this.#autoScrollRaf != null) {
+      cancelAnimationFrame(this.#autoScrollRaf);
+      this.#autoScrollRaf = null;
+    }
+  }
+
+  // Schedule the loop only if one is not already pending, so pointermove and
+  // the tick's self-reschedule can never create two concurrent loops.
+  #ensureAutoScrollLoop() {
+    if (this.#autoScrollRaf == null) {
+      this.#autoScrollRaf = requestAnimationFrame(this.#autoScrollTick);
+    }
+  }
+
+  #autoScrollTick = () => {
+    this.#autoScrollRaf = null;
+    if (!this.#isSweeping || this.#autoScrollVel === 0) return;
+
+    let gallery = this.shadowRoot.getElementById('gallery');
+    if (!gallery) return;
+
+    let maxScroll = gallery.scrollHeight - gallery.clientHeight;
+    let next = Math.min(maxScroll, Math.max(0, gallery.scrollTop + this.#autoScrollVel));
+    let moved = next !== gallery.scrollTop;
+    gallery.scrollTop = next;
+
+    // After scrolling, a different item sits under the (stationary) pointer;
+    // re-run the range computation so the selection extends. Clamp the y just
+    // inside the viewport so a finger parked exactly at (or past) the edge
+    // still hit-tests onto the edge-most item instead of failing the
+    // out-of-viewport reject in #itemAtPoint. The native scroll event also
+    // fires and repaints newly revealed albums.
+    if (moved) {
+      let rect = gallery.getBoundingClientRect();
+      // Keep the re-hit-test point below the controls bar (see #sweepTopEdge)
+      // so an upward auto-scroll lands on a visible thumb, not one hidden
+      // behind the bar.
+      let topEdge = this.#sweepTopEdge(rect);
+      let clampedY = Math.min(rect.bottom - 1, Math.max(topEdge + 1, this.#sweepLastY));
+      this.#updateSweepRangeAt(this.#sweepLastX, clampedY);
+      // Keep looping while still in an edge zone and not clamped at an end.
+      this.#ensureAutoScrollLoop();
+    } else {
+      // Clamped at top/bottom: stop until the pointer moves again.
+      this.#autoScrollVel = 0;
+    }
+  }
+
+  #stopAutoScroll() {
+    if (this.#autoScrollRaf != null) {
+      cancelAnimationFrame(this.#autoScrollRaf);
+      this.#autoScrollRaf = null;
+    }
+    this.#autoScrollVel = 0;
+  }
+
+  // Apply the new inclusive range and revert items that dropped out of the old
+  // range back to their pre-sweep baseline. Only touches items whose in-range
+  // membership actually changed, so it is cheap even for large sweeps.
+  #applyRangeDiff(prevLo, prevHi, lo, hi) {
+    // Revert items that were in the old range but not the new one.
+    for (let i = prevLo; i <= prevHi; i++) {
+      if (i >= lo && i <= hi) continue; // still in range
+      let entry = this.#sweepOrder[i];
+      let base = this.#sweepBaseline.get(entry.id);
+      entry.album.setItemSelectedById(entry.item.data.id, base);
+    }
+    // Select items that are in the new range but were not in the old one.
+    for (let i = lo; i <= hi; i++) {
+      if (i >= prevLo && i <= prevHi) continue; // already applied
+      let entry = this.#sweepOrder[i];
+      entry.album.setItemSelectedById(entry.item.data.id, this.#sweepApply);
+    }
+  }
+
+  #handleSweepEnd = () => {
+    if (!this.#isSweeping) return;
+    this.#isSweeping = false;
+    this.#stopAutoScroll();
+    this.#sweepOrder = null;
+    this.#sweepIndexById = null;
+    this.#sweepBaseline = null;
+    this.#sweepRange = null;
+    this.#sweepAnchorIdx = -1;
+    let galleryEl = this.shadowRoot.getElementById('gallery');
+    if (!galleryEl) return;
+    galleryEl.classList.remove('sweeping');
+    galleryEl.removeEventListener('pointermove', this.#handleSweepMove);
+    galleryEl.removeEventListener('pointerup', this.#handleSweepEnd);
+    galleryEl.removeEventListener('pointercancel', this.#handleSweepEnd);
+  }
+
+  // Hit-test a viewport point against every item's rect, inverting the same
+  // geometry used by #getThumbRect. Returns { album, item } or null. Works
+  // across album/day boundaries since we walk all sections.
+  #itemAtPoint(px, py) {
+    let gallery = this.shadowRoot.getElementById('gallery');
+    let galleryRect = gallery.getBoundingClientRect();
+    let scrollTop = gallery.scrollTop;
+
+    // Quick reject: point outside the gallery viewport.
+    if (px < galleryRect.left || px > galleryRect.right ||
+        py < galleryRect.top || py > galleryRect.bottom) {
+      return null;
+    }
+
+    for (let section of this.#daySections) {
+      for (let album of section.albums) {
+        for (let item of album.data) {
+          if (!item.layout || item.layout.trX == null) continue;
+          let x = galleryRect.left + parseFloat(item.layout.trX);
+          let y = galleryRect.top + section.offsetTop + album.offsetTop +
+                  item.layout.offsetHeight - scrollTop;
+          let w = item.layout.width;
+          let h = item.layout.height;
+          if (px >= x && px <= x + w && py >= y && py <= y + h) {
+            return { album, item };
+          }
+        }
+      }
+    }
+    return null;
+  }
+  // --- end drag-select sweep ---------------------------------------------
+
   #handleResize() {
     for (let section of this.#daySections) {
       section.width = this.shadowRoot.getElementById('gallery').clientWidth;
@@ -824,6 +1149,17 @@ class PlGallery extends HTMLElement {
     let galleryEl = this.shadowRoot.getElementById('gallery');
     galleryEl?.removeEventListener('scroll', this.#handleScroll);
     galleryEl?.removeEventListener('scrollend', this.#handleScrollEnd);
+    // Defensive: if disconnected mid-sweep, remove the transient listeners.
+    galleryEl?.removeEventListener('pointermove', this.#handleSweepMove);
+    galleryEl?.removeEventListener('pointerup', this.#handleSweepEnd);
+    galleryEl?.removeEventListener('pointercancel', this.#handleSweepEnd);
+    this.removeEventListener('pl-thumb-longpress-armed', this.#handleLongPressArmed);
+    this.#isSweeping = false;
+    this.#stopAutoScroll();
+    this.#sweepOrder = null;
+    this.#sweepIndexById = null;
+    this.#sweepBaseline = null;
+    this.#sweepRange = null;
     this.shadowRoot.getElementById('next-album-btn')?.removeEventListener('click', this.#scrollToNextAlbum);
     this.shadowRoot.getElementById('prev-album-btn')?.removeEventListener('click', this.#scrollToPrevAlbum);
     window.removeEventListener('resize', this.#throttleHandleResize);
