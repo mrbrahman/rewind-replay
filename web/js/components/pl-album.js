@@ -562,19 +562,20 @@ class PlAlbum extends HTMLElement {
   }
 
   // this method is exposed
+  // Comparator for album time-DESC order, matching the DB's initial-fetch
+  // ordering (captured_at DESC, i.e. epoch t DESC). Items without a capture
+  // time have t === 0 and naturally sink to the bottom. Shared with the
+  // gallery's move flow so freshly-created target albums use the same
+  // ordering as existing ones.
+  static byTimeDesc(a, b) {
+    return (b.data?.t || 0) - (a.data?.t || 0);
+  }
+
   addNewItems = (items)=>{
     this.data.push(...items);
 
-    // Re-sort to keep the album in time-DESC order. Items with a real
-    // capture time come first (newest first); no-time items go at the end
-    // sorted alphabetically by id (stable fallback when t is identical).
-    this.data.sort((a, b) => {
-      let ah = a.data?.hasTime ? 1 : 0;
-      let bh = b.data?.hasTime ? 1 : 0;
-      if (ah !== bh) return bh - ah;          // hasTime first
-      if (ah === 1) return (b.data.t || 0) - (a.data.t || 0); // newest first
-      return String(a.data?.id || '').localeCompare(String(b.data?.id || ''));
-    });
+    // Re-sort to keep the album in time-DESC order.
+    this.data.sort(PlAlbum.byTimeDesc);
 
     this.#doLayout();
     if(this.#paint_layout){
