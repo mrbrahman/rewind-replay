@@ -497,6 +497,16 @@ class PlGallery extends HTMLElement {
       for (let item of p.items) successIds.add(item.data.id);
     }
 
+    // Update each moved item's albumName to the new value BEFORE deleting
+    // from source albums. This must happen first because deleting all items
+    // from a single-album day tears the day-section down synchronously (via
+    // the pl-album-empty -> #removeAlbum path). If we deferred the albumName
+    // update to the insertion loop below, a recreated section would rebuild
+    // its albums from items still carrying the old albumName.
+    for (let p of okPlan) {
+      for (let item of p.items) item.albumName = p.targetAlbumName;
+    }
+
     for (let album of this.#allAlbums()) album.deleteItemsByIds(successIds);
 
     for (let p of okPlan) {
@@ -508,11 +518,16 @@ class PlGallery extends HTMLElement {
 
     for (let p of okPlan) {
       let section = this.#daySections.find(s => s.day === p.day);
-      if (!section) continue;
 
-      // Update each item's albumName to the new value so future operations
-      // see it correctly.
-      for (let item of p.items) item.albumName = p.targetAlbumName;
+      // The source day-section may have been torn down during the deletes
+      // above if every one of its albums emptied (e.g. selecting all items
+      // from a single-album day and moving them to a new album). Recreate it
+      // in the correct chronological (day DESC) position so the moved items
+      // have somewhere to render.
+      if (!section) {
+        section = this.#recreateDaySection(p.day);
+      }
+      if (!section) continue;
 
       let existingAlbum = section.albums.find(a => a.album_name === p.targetAlbumName);
       if (existingAlbum) {
@@ -527,14 +542,21 @@ class PlGallery extends HTMLElement {
 
         let insertBefore = section.albums.find(a => this.#albumMaxT(a) < newAlbumMaxT);
 
+        // Wrap and sort into the same time-DESC (epoch t) order used by
+        // existing albums (via pl-album.addNewItems) and the DB's initial
+        // fetch. Without this, a freshly-created album would show items in
+        // selection order, not reverse-time order.
+        let newAlbumData = p.items.map(i => ({
+          data: i.data, layout: {}, day: p.day,
+          albumDate: p.day, albumName: p.targetAlbumName
+        }));
+        newAlbumData.sort(customElements.get('pl-album').byTimeDesc);
+
         let newAlbum = Object.assign(document.createElement('pl-album'), {
           id: `${p.day}-${(p.targetAlbumName || '').replaceAll(/[\s/&]/gi, '_') || 'unnamed'}`,
           album_name: p.targetAlbumName,
           album_date: p.day,
-          data: p.items.map(i => ({
-            data: i.data, layout: {}, day: p.day,
-            albumDate: p.day, albumName: p.targetAlbumName
-          })),
+          data: newAlbumData,
           width: this.shadowRoot.getElementById('gallery').clientWidth,
           collectionId,
           placeholderText: this.#placeholderText
@@ -708,6 +730,41 @@ class PlGallery extends HTMLElement {
     }
 
     this.#handleAlbumHeightChange();
+  }
+
+  // Recreate an empty day-section for `day`, inserted in the correct
+  // chronological (day DESC) position in both the DOM and #daySections. Used
+  // by the move flow when a source section was torn down because all its
+  // albums emptied, but it is still needed as a move target. Returns the new
+  // section (or the existing one if it somehow still exists). The caller adds
+  // the moved album(s) into it.
+  #recreateDaySection(day) {
+    let existing = this.#daySections.find(s => s.day === day);
+    if (existing) return existing;
+
+    let galleryEl = this.shadowRoot.getElementById('gallery');
+    let section = Object.assign(document.createElement('pl-day-section'), {
+      day,
+      width: galleryEl.clientWidth,
+      readOnly: this.#mode === 'trash',
+      collectionId: this.#query.collectionId,
+      placeholderText: this.#placeholderText,
+      items: []
+    });
+
+    // Sections are ordered day DESC (newest first), matching the initial
+    // render. Insert before the first section whose day is older than `day`.
+    let insertBeforeSection = this.#daySections.find(s => s.day < day);
+    if (insertBeforeSection) {
+      galleryEl.insertBefore(section, insertBeforeSection);
+      let idx = this.#daySections.indexOf(insertBeforeSection);
+      this.#daySections.splice(idx, 0, section);
+    } else {
+      galleryEl.appendChild(section);
+      this.#daySections.push(section);
+    }
+
+    return section;
   }
 
   #selectivelyPaintAlbums(forceRepaint = true) {
