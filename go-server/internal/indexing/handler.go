@@ -201,7 +201,7 @@ func (h *Handler) updateIndexerConcurrency(c *gin.Context) {
 	h.indexQueue.SetConcurrency(concurrency)
 
 	// Persist to runtime config so it survives restart
-	if err := h.rtConfig.Update("maxConcurrency", float64(concurrency)); err != nil {
+	if err := h.rtConfig.SetMaxConcurrency(concurrency); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": gin.H{
 			"message": "concurrency updated but failed to persist: " + err.Error(),
 			"code":    "PERSIST_ERROR",

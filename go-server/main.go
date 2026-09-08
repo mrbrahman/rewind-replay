@@ -148,13 +148,6 @@ func runServe() {
 		slog.Info("ML_SERVICE_URL not set, using default", "url", cfg.MLServiceURL)
 	}
 
-	// Load runtime config
-	rtCfg, err := config.LoadRuntimeConfig(cfg.DataDir)
-	if err != nil {
-		slog.Error("failed to load runtime config", "error", err)
-		os.Exit(1)
-	}
-
 	// Check if ML service is reachable
 	checkMLService(cfg.MLServiceURL)
 
@@ -181,6 +174,14 @@ func runServe() {
 		os.Exit(1)
 	}
 	defer db.Close()
+
+	// Load runtime config from the database (table + defaults are created by
+	// migrations, which ran inside database.Open above).
+	rtCfg, err := config.LoadRuntimeConfig(db.Conn)
+	if err != nil {
+		slog.Error("failed to load runtime config", "error", err)
+		os.Exit(1)
+	}
 
 	// Create auth service
 	authDB := auth.NewAuthDB(db.Conn)

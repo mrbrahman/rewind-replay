@@ -115,6 +115,7 @@ func (d *DB) runMigrations() error {
 		{version: 10, filename: "migrations/010-initial-schema.sql"},
 		{version: 11, filename: "migrations/011-geo-lookups.sql"},
 		{version: 12, filename: "migrations/012-capture-time-columns.sql"},
+		{version: 13, filename: "migrations/013-runtime-config.sql"},
 	}
 
 	for _, m := range migrations {

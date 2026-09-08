@@ -1,20 +1,24 @@
 package config
 
 import (
-	"encoding/json"
+	"database/sql"
 	"fmt"
-	"log/slog"
-	"os"
-	"path/filepath"
-	"reflect"
+	"strconv"
 	"sync"
 )
 
-// RuntimeConfig holds configuration that can change at runtime, persisted as JSON.
+// RuntimeConfig holds configuration that can change at runtime, persisted in
+// the runtime_config key/value table. Values are stored as raw TEXT scalars
+// (e.g. 'libvpx-vp9', '4', 'true'); the type of each key is known here, so the
+// loader parses each column with the appropriate typed parser and the setters
+// write typed values. No data_type column and no reflection are involved.
+//
+// The struct is the in-memory source of truth: it is loaded once at startup and
+// shared (by pointer) with the packages that consume it. The mutex guards
+// concurrent access to the fields across goroutines.
 type RuntimeConfig struct {
 	mu sync.RWMutex `json:"-"`
-
-	dataDir string `json:"-"`
+	db *sql.DB      `json:"-"`
 
 	StartFileWatcherAtStartup            bool   `json:"startFileWatcherAtStartup"`
 	StartScheduledIndexingAtStartup      bool   `json:"startScheduledIndexingAtStartup"`
@@ -28,157 +32,188 @@ type RuntimeConfig struct {
 	PerformFaceRecognition               bool   `json:"performFaceRecognition"`
 }
 
-// LoadRuntimeConfig reads the runtime config from DataDir/runtime-config.json.
-func LoadRuntimeConfig(dataDir string) (*RuntimeConfig, error) {
-	rc := &RuntimeConfig{dataDir: dataDir}
+// LoadRuntimeConfig reads all rows from runtime_config and populates the struct.
+// Defaults are seeded by migration 013, so a fresh DB already has every key.
+// A key with no matching row keeps the Go zero value (so any newly added
+// setting must seed its default in a migration); a malformed stored value for a
+// typed key is a hard error, surfacing a corrupted/hand-edited row.
+func LoadRuntimeConfig(db *sql.DB) (*RuntimeConfig, error) {
+	rc := &RuntimeConfig{db: db}
 
-	configPath := filepath.Join(dataDir, "runtime-config.json")
-	data, err := os.ReadFile(configPath)
+	rows, err := db.Query("SELECT key, value FROM runtime_config")
 	if err != nil {
-		if os.IsNotExist(err) {
-			// File missing - populate with sensible defaults and create it
-			slog.Warn("runtime-config.json not found in DATA_DIR, creating with defaults. Settings can be changed via Admin > Settings page", "path", configPath)
-
-			rc.StartFileWatcherAtStartup = true
-			rc.StartScheduledIndexingAtStartup = true
-			rc.ScanFilesForChangesAndIndexAtStartup = false
-			rc.FilesDeletedThreshold = 5
-			rc.AuditFiles = true
-			rc.GeonamesHourlyLimit = 1000
-			rc.GeonamesDailyLimit = 10000
-			rc.VideoEncoder = "libvpx-vp9"
-			rc.MaxConcurrency = 4
-			rc.PerformFaceRecognition = true
-
-			if saveErr := rc.Save(dataDir); saveErr != nil {
-				return nil, fmt.Errorf("creating default runtime config: %w", saveErr)
-			}
-			return rc, nil
-		}
 		return nil, fmt.Errorf("reading runtime config: %w", err)
 	}
+	defer rows.Close()
 
-	if err := json.Unmarshal(data, rc); err != nil {
-		return nil, fmt.Errorf("parsing runtime config: %w", err)
+	raw := make(map[string]string)
+	for rows.Next() {
+		var k, v string
+		if err := rows.Scan(&k, &v); err != nil {
+			return nil, fmt.Errorf("scanning runtime config row: %w", err)
+		}
+		raw[k] = v
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating runtime config rows: %w", err)
 	}
 
+	// Each key is parsed with its known type. Missing keys keep the zero value.
+	var perr error
+	getBool := func(key string, dst *bool) {
+		if s, ok := raw[key]; ok {
+			b, err := strconv.ParseBool(s)
+			if err != nil {
+				perr = fmt.Errorf("config key %q: invalid boolean %q: %w", key, s, err)
+				return
+			}
+			*dst = b
+		}
+	}
+	getInt := func(key string, dst *int) {
+		if s, ok := raw[key]; ok {
+			n, err := strconv.Atoi(s)
+			if err != nil {
+				perr = fmt.Errorf("config key %q: invalid integer %q: %w", key, s, err)
+				return
+			}
+			*dst = n
+		}
+	}
+	getStr := func(key string, dst *string) {
+		if s, ok := raw[key]; ok {
+			*dst = s // raw value stored as-is
+		}
+	}
+
+	getBool("startFileWatcherAtStartup", &rc.StartFileWatcherAtStartup)
+	getBool("startScheduledIndexingAtStartup", &rc.StartScheduledIndexingAtStartup)
+	getBool("scanFilesForChangesAndIndexAtStartup", &rc.ScanFilesForChangesAndIndexAtStartup)
+	getInt("filesDeletedThreshold", &rc.FilesDeletedThreshold)
+	getBool("auditFiles", &rc.AuditFiles)
+	getInt("geonamesHourlyLimit", &rc.GeonamesHourlyLimit)
+	getInt("geonamesDailyLimit", &rc.GeonamesDailyLimit)
+	getStr("videoEncoder", &rc.VideoEncoder)
+	getInt("maxConcurrency", &rc.MaxConcurrency)
+	getBool("performFaceRecognition", &rc.PerformFaceRecognition)
+
+	if perr != nil {
+		return nil, perr
+	}
 	return rc, nil
 }
 
-// Save writes the runtime config back to DataDir/runtime-config.json.
-func (rc *RuntimeConfig) Save(dataDir string) error {
-	rc.mu.RLock()
-	data, err := json.MarshalIndent(rc, "", "  ")
-	rc.mu.RUnlock()
-	if err != nil {
-		return fmt.Errorf("marshaling runtime config: %w", err)
+// setField persists one key as a raw TEXT scalar and, only on success, updates
+// the in-memory field. Generic over T so the value and field pointer keep their
+// concrete types: no interface{}, no type assertion, no reflection. Callers
+// hold rc.mu.
+func setField[T any](rc *RuntimeConfig, key string, field *T, v T) error {
+	// fmt %v yields the raw scalar: bool -> "true"/"false", int -> "4",
+	// string -> the string itself.
+	raw := fmt.Sprintf("%v", v)
+	if _, err := rc.db.Exec(
+		`INSERT INTO runtime_config (key, value) VALUES (?, ?)
+		 ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+		key, raw,
+	); err != nil {
+		return fmt.Errorf("writing runtime config %q: %w", key, err)
 	}
-
-	// Ensure the data directory exists
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		return fmt.Errorf("creating data directory: %w", err)
-	}
-
-	configPath := filepath.Join(dataDir, "runtime-config.json")
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
-		return fmt.Errorf("writing runtime config: %w", err)
-	}
-
+	*field = v
 	return nil
 }
 
-// Update updates a field by its JSON key name and saves the config.
-func (rc *RuntimeConfig) Update(key string, value interface{}) error {
+// Typed setters. Each locks, persists, then assigns via setField. Adding a new
+// setting means: add a struct field, a setter here, a loader line above, and a
+// seed row in a migration.
+
+func (rc *RuntimeConfig) SetStartFileWatcherAtStartup(v bool) error {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
-
-	rv := reflect.ValueOf(rc).Elem()
-	rt := rv.Type()
-
-	// Find the field matching the JSON tag
-	fieldIdx := -1
-	for i := 0; i < rt.NumField(); i++ {
-		field := rt.Field(i)
-		tag := field.Tag.Get("json")
-		if tag == "" || tag == "-" {
-			continue
-		}
-		if tag == key {
-			fieldIdx = i
-			break
-		}
-	}
-
-	if fieldIdx == -1 {
-		return fmt.Errorf("unknown config key: %q", key)
-	}
-
-	field := rv.Field(fieldIdx)
-	if !field.CanSet() {
-		return fmt.Errorf("cannot set field for key: %q", key)
-	}
-
-	// Convert value to the appropriate type
-	switch field.Kind() {
-	case reflect.Bool:
-		b, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("key %q expects bool, got %T", key, value)
-		}
-		field.SetBool(b)
-	case reflect.Int, reflect.Int64:
-		switch v := value.(type) {
-		case float64:
-			field.SetInt(int64(v))
-		case int:
-			field.SetInt(int64(v))
-		case int64:
-			field.SetInt(v)
-		default:
-			return fmt.Errorf("key %q expects int, got %T", key, value)
-		}
-	case reflect.String:
-		s, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("key %q expects string, got %T", key, value)
-		}
-		field.SetString(s)
-	default:
-		return fmt.Errorf("unsupported field type for key %q: %s", key, field.Kind())
-	}
-
-	// Save after update (release write lock temporarily for save)
-	data, err := json.MarshalIndent(rc, "", "  ")
-	if err != nil {
-		return fmt.Errorf("marshaling runtime config: %w", err)
-	}
-
-	configPath := filepath.Join(rc.dataDir, "runtime-config.json")
-	if err := os.WriteFile(configPath, data, 0644); err != nil {
-		return fmt.Errorf("writing runtime config: %w", err)
-	}
-
-	return nil
+	return setField(rc, "startFileWatcherAtStartup", &rc.StartFileWatcherAtStartup, v)
 }
 
-// Get retrieves the current value of a config field by its JSON key name.
+func (rc *RuntimeConfig) SetStartScheduledIndexingAtStartup(v bool) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return setField(rc, "startScheduledIndexingAtStartup", &rc.StartScheduledIndexingAtStartup, v)
+}
+
+func (rc *RuntimeConfig) SetScanFilesForChangesAndIndexAtStartup(v bool) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return setField(rc, "scanFilesForChangesAndIndexAtStartup", &rc.ScanFilesForChangesAndIndexAtStartup, v)
+}
+
+func (rc *RuntimeConfig) SetFilesDeletedThreshold(v int) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return setField(rc, "filesDeletedThreshold", &rc.FilesDeletedThreshold, v)
+}
+
+func (rc *RuntimeConfig) SetAuditFiles(v bool) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return setField(rc, "auditFiles", &rc.AuditFiles, v)
+}
+
+func (rc *RuntimeConfig) SetGeonamesHourlyLimit(v int) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return setField(rc, "geonamesHourlyLimit", &rc.GeonamesHourlyLimit, v)
+}
+
+func (rc *RuntimeConfig) SetGeonamesDailyLimit(v int) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return setField(rc, "geonamesDailyLimit", &rc.GeonamesDailyLimit, v)
+}
+
+func (rc *RuntimeConfig) SetVideoEncoder(v string) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return setField(rc, "videoEncoder", &rc.VideoEncoder, v)
+}
+
+func (rc *RuntimeConfig) SetMaxConcurrency(v int) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return setField(rc, "maxConcurrency", &rc.MaxConcurrency, v)
+}
+
+func (rc *RuntimeConfig) SetPerformFaceRecognition(v bool) error {
+	rc.mu.Lock()
+	defer rc.mu.Unlock()
+	return setField(rc, "performFaceRecognition", &rc.PerformFaceRecognition, v)
+}
+
+// Get retrieves the current in-memory value of a config field by its JSON key
+// name. Used by the admin handler to echo the stored value back after an update.
 func (rc *RuntimeConfig) Get(key string) (interface{}, error) {
 	rc.mu.RLock()
 	defer rc.mu.RUnlock()
 
-	rv := reflect.ValueOf(rc).Elem()
-	rt := rv.Type()
-
-	for i := 0; i < rt.NumField(); i++ {
-		field := rt.Field(i)
-		tag := field.Tag.Get("json")
-		if tag == "" || tag == "-" {
-			continue
-		}
-		if tag == key {
-			return rv.Field(i).Interface(), nil
-		}
+	switch key {
+	case "startFileWatcherAtStartup":
+		return rc.StartFileWatcherAtStartup, nil
+	case "startScheduledIndexingAtStartup":
+		return rc.StartScheduledIndexingAtStartup, nil
+	case "scanFilesForChangesAndIndexAtStartup":
+		return rc.ScanFilesForChangesAndIndexAtStartup, nil
+	case "filesDeletedThreshold":
+		return rc.FilesDeletedThreshold, nil
+	case "auditFiles":
+		return rc.AuditFiles, nil
+	case "geonamesHourlyLimit":
+		return rc.GeonamesHourlyLimit, nil
+	case "geonamesDailyLimit":
+		return rc.GeonamesDailyLimit, nil
+	case "videoEncoder":
+		return rc.VideoEncoder, nil
+	case "maxConcurrency":
+		return rc.MaxConcurrency, nil
+	case "performFaceRecognition":
+		return rc.PerformFaceRecognition, nil
+	default:
+		return nil, fmt.Errorf("unknown config key: %q", key)
 	}
-
-	return nil, fmt.Errorf("unknown config key: %q", key)
 }
