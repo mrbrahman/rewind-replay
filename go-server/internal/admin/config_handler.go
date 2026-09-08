@@ -87,18 +87,6 @@ func (h *ConfigHandler) dispatchUpdate(key string, value interface{}) error {
 			return err
 		}
 		return rc.SetStartScheduledIndexingAtStartup(b)
-	case "scanFilesForChangesAndIndexAtStartup":
-		b, err := asBool(key, value)
-		if err != nil {
-			return err
-		}
-		return rc.SetScanFilesForChangesAndIndexAtStartup(b)
-	case "filesDeletedThreshold":
-		n, err := asInt(key, value)
-		if err != nil {
-			return err
-		}
-		return rc.SetFilesDeletedThreshold(n)
 	case "auditFiles":
 		b, err := asBool(key, value)
 		if err != nil {

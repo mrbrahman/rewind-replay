@@ -182,6 +182,7 @@ func runServe() {
 		slog.Error("failed to load runtime config", "error", err)
 		os.Exit(1)
 	}
+	slog.Info("runtime config loaded from database")
 
 	// Create auth service
 	authDB := auth.NewAuthDB(db.Conn)
@@ -334,20 +335,6 @@ func runServe() {
 		// Mark scheduled intakes as stopped in DB when scheduling is disabled
 		collectionsDB.SetIntakeStatusByMethod("scheduled", "stopped")
 		slog.Info("scheduled indexing at startup disabled - marked scheduled intakes as stopped")
-	}
-	if rtCfg.ScanFilesForChangesAndIndexAtStartup {
-		go func() {
-			cols, err := collectionsDB.GetAll()
-			if err != nil {
-				slog.Error("failed to get collections for scan", "error", err)
-				return
-			}
-			for _, col := range cols {
-				if err := indexer.ScanForChanges(col.CollectionID); err != nil {
-					slog.Error("scan for changes failed", "collection_id", col.CollectionID, "error", err)
-				}
-			}
-		}()
 	}
 	if err := frameManager.LoadAllFrames(); err != nil {
 		slog.Error("failed to load frames", "error", err)

@@ -20,9 +20,6 @@ class PlAdminSettings extends HTMLElement {
             <div class="field">
               <sl-switch data-key="startFileWatcherAtStartup" help-text="Start file watcher (immediate indexing) at startup.">Start File Watcher at Startup</sl-switch>
             </div>
-            <div class="field">
-              <sl-switch data-key="scanFilesForChangesAndIndexAtStartup" help-text="Scan for file changes and index at startup.">Scan Files for Changes at Startup</sl-switch>
-            </div>
           </section>
 
           <section>
@@ -33,9 +30,6 @@ class PlAdminSettings extends HTMLElement {
 
             <div class="field">
               <sl-input data-key="maxConcurrency" type="number" label="Max Concurrency" help-text="Max parallel indexing tasks. Changes via this page only persist the value -- takes effect on next restart." size="small"></sl-input>
-            </div>
-            <div class="field">
-              <sl-input data-key="filesDeletedThreshold" type="number" label="Files Deleted Threshold" help-text="Threshold for number of deleted files before alerting." size="small"></sl-input>
             </div>
           </section>
 

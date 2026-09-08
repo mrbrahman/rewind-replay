@@ -12,8 +12,6 @@ CREATE TABLE runtime_config (
 INSERT INTO runtime_config (key, value) VALUES
     ('startFileWatcherAtStartup',            'true'),
     ('startScheduledIndexingAtStartup',      'true'),
-    ('scanFilesForChangesAndIndexAtStartup', 'false'),
-    ('filesDeletedThreshold',                '5'),
     ('auditFiles',                           'true'),
     ('geonamesHourlyLimit',                  '1000'),
     ('geonamesDailyLimit',                   '10000'),

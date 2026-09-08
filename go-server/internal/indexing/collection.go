@@ -59,10 +59,7 @@ func (idx *Indexer) InitialIndexing(collectionID int64) error {
 //
 // NOTE: Deleted files (present in DB but not on disk) are detected but NOT acted on.
 // Node.js also detects deletions but does not trash/remove them automatically.
-// This is intentional — automatic deletion is risky; user should handle manually.
-//
-// NOTE: filesDeletedThreshold (runtime config) is not implemented because Node.js
-// also defines it but never uses it in any logic.
+// This is intentional - automatic deletion is risky; user should handle manually.
 func (idx *Indexer) ScanForChanges(collectionID int64) error {
 	collection, err := idx.collectionsDB.Get(collectionID)
 	if err != nil {

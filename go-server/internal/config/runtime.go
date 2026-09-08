@@ -20,16 +20,14 @@ type RuntimeConfig struct {
 	mu sync.RWMutex `json:"-"`
 	db *sql.DB      `json:"-"`
 
-	StartFileWatcherAtStartup            bool   `json:"startFileWatcherAtStartup"`
-	StartScheduledIndexingAtStartup      bool   `json:"startScheduledIndexingAtStartup"`
-	ScanFilesForChangesAndIndexAtStartup bool   `json:"scanFilesForChangesAndIndexAtStartup"`
-	FilesDeletedThreshold                int    `json:"filesDeletedThreshold"`
-	AuditFiles                           bool   `json:"auditFiles"`
-	GeonamesHourlyLimit                  int    `json:"geonamesHourlyLimit"`
-	GeonamesDailyLimit                   int    `json:"geonamesDailyLimit"`
-	VideoEncoder                         string `json:"videoEncoder"`
-	MaxConcurrency                       int    `json:"maxConcurrency"`
-	PerformFaceRecognition               bool   `json:"performFaceRecognition"`
+	StartFileWatcherAtStartup       bool   `json:"startFileWatcherAtStartup"`
+	StartScheduledIndexingAtStartup bool   `json:"startScheduledIndexingAtStartup"`
+	AuditFiles                      bool   `json:"auditFiles"`
+	GeonamesHourlyLimit             int    `json:"geonamesHourlyLimit"`
+	GeonamesDailyLimit              int    `json:"geonamesDailyLimit"`
+	VideoEncoder                    string `json:"videoEncoder"`
+	MaxConcurrency                  int    `json:"maxConcurrency"`
+	PerformFaceRecognition          bool   `json:"performFaceRecognition"`
 }
 
 // LoadRuntimeConfig reads all rows from runtime_config and populates the struct.
@@ -88,8 +86,6 @@ func LoadRuntimeConfig(db *sql.DB) (*RuntimeConfig, error) {
 
 	getBool("startFileWatcherAtStartup", &rc.StartFileWatcherAtStartup)
 	getBool("startScheduledIndexingAtStartup", &rc.StartScheduledIndexingAtStartup)
-	getBool("scanFilesForChangesAndIndexAtStartup", &rc.ScanFilesForChangesAndIndexAtStartup)
-	getInt("filesDeletedThreshold", &rc.FilesDeletedThreshold)
 	getBool("auditFiles", &rc.AuditFiles)
 	getInt("geonamesHourlyLimit", &rc.GeonamesHourlyLimit)
 	getInt("geonamesDailyLimit", &rc.GeonamesDailyLimit)
@@ -136,18 +132,6 @@ func (rc *RuntimeConfig) SetStartScheduledIndexingAtStartup(v bool) error {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()
 	return setField(rc, "startScheduledIndexingAtStartup", &rc.StartScheduledIndexingAtStartup, v)
-}
-
-func (rc *RuntimeConfig) SetScanFilesForChangesAndIndexAtStartup(v bool) error {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
-	return setField(rc, "scanFilesForChangesAndIndexAtStartup", &rc.ScanFilesForChangesAndIndexAtStartup, v)
-}
-
-func (rc *RuntimeConfig) SetFilesDeletedThreshold(v int) error {
-	rc.mu.Lock()
-	defer rc.mu.Unlock()
-	return setField(rc, "filesDeletedThreshold", &rc.FilesDeletedThreshold, v)
 }
 
 func (rc *RuntimeConfig) SetAuditFiles(v bool) error {
@@ -197,10 +181,6 @@ func (rc *RuntimeConfig) Get(key string) (interface{}, error) {
 		return rc.StartFileWatcherAtStartup, nil
 	case "startScheduledIndexingAtStartup":
 		return rc.StartScheduledIndexingAtStartup, nil
-	case "scanFilesForChangesAndIndexAtStartup":
-		return rc.ScanFilesForChangesAndIndexAtStartup, nil
-	case "filesDeletedThreshold":
-		return rc.FilesDeletedThreshold, nil
 	case "auditFiles":
 		return rc.AuditFiles, nil
 	case "geonamesHourlyLimit":
