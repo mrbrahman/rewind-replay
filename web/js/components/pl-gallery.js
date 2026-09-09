@@ -33,7 +33,7 @@ class PlGallery extends HTMLElement {
   // internal state
   #data = [];                  // [{day, items: [{album, data:{...}, day}]}]
   #daySections = [];           // pl-day-section elements (one per day)
-  #albumsInBuffer = {};        // album.id -> 'full' | 'partial' | 'buffer-overflow'
+  #albumsInBuffer = new Map(); // album element -> 'full' | 'partial' | 'buffer-overflow'
   #albumsSelectedCnt = {};     // album_name -> count
   #itemsSelected = [];         // selected items across all albums
   // Parallel set of selected item ids, kept in sync with #itemsSelected. Used
@@ -276,18 +276,6 @@ class PlGallery extends HTMLElement {
     }
   }
 
-  // Greatest item.data.t in the album (0 if none have hasTime). Used to
-  // position newly created albums within their day-section so the order
-  // tracks time DESC, matching how items are ordered everywhere else.
-  #albumMaxT(album) {
-    if (!album.data?.length) return 0;
-    let max = 0;
-    for (let item of album.data) {
-      if (item.data?.hasTime && (item.data.t || 0) > max) max = item.data.t;
-    }
-    return max;
-  }
-
   // Walk all day-sections to get the flat album list. Used for selective
   // painting and any cross-album operation.
   #allAlbums() {
@@ -429,6 +417,11 @@ class PlGallery extends HTMLElement {
       c.ctr = this.#itemsSelected.length;
       c.selectedAlbums = this.#albumsSelectedCnt;
 
+      // Organize is single-day only; disable it when the selection spans
+      // more than one day (rating/private/delete still apply).
+      let distinctDays = new Set(this.#itemsSelected.map(x => x.day || x.albumDate));
+      c.multiDay = distinctDays.size > 1;
+
       let distinctRatings = [...new Set(this.#itemsSelected.map(x => x.data.rating))];
       c.rating = distinctRatings.length === 1 ? distinctRatings[0] : 0;
       c.allPrivate = this.#itemsSelected.every(x => x.data.private);
@@ -438,154 +431,62 @@ class PlGallery extends HTMLElement {
     }
   }
 
-  // Move selected items to a target album (descriptive name only - the
-  // server constructs the per-day folder path itself). When the selection
-  // spans multiple days, each day gets its own folder so items stay
-  // aligned with their own day in the timeline.
+  // Move selected items into a target album within their day (the server
+  // constructs the per-day folder path itself). Organize is restricted to a
+  // single day (the controls disable it for multi-day selections), so there
+  // is exactly one affected day-section.
   //
-  // Per-day moves run in parallel. Failures are reported per day; only the
-  // items in successfully moved days are removed from their source albums
-  // (Option A: partial success preserves the rest of the UI state).
+  // After the server move succeeds we relabel the affected day's raw items
+  // and let the day-section rebuild its albums via groupConsecutiveByAlbum -
+  // the same grouping used on initial load. This makes the client match a
+  // fresh server load in every case: a mid-day selection splits the source
+  // album into [before][new][after], moving all items just relabels the
+  // single album, etc. No manual album insertion/positioning needed.
   #createOrMoveSelectedItems = async (descName) => {
     descName = (descName || '').trim();
     let collectionId = this.#query.collectionId;
 
     let movedItems = this.#itemsSelected.slice();
+    if (movedItems.length === 0) return;
 
-    // Group items by their original day. day === albumDate for the timeline.
-    let byDay = new Map();
-    for (let item of movedItems) {
-      const day = item.day || item.albumDate;
-      if (!byDay.has(day)) byDay.set(day, []);
-      byDay.get(day).push(item);
+    // Safety net: organize is single-day only (enforced by the controls).
+    let days = new Set(movedItems.map(i => i.day || i.albumDate));
+    if (days.size > 1) {
+      notify('Organize works within a single day. Deselect the extra day(s) and try again.', 'warning', -1);
+      return;
     }
+    let day = [...days][0];
 
-    // Deduplicate UUIDs per day as a safety net (the early check in
-    // #handleItemsSelected already warned the user about the root cause).
-    let plan = [...byDay.entries()].map(([day, items]) => ({
-      day,
-      items,
-      targetAlbumDate: day,
-      targetAlbumName: descName,
-      uuids: [...new Set(items.map(i => i.data.id))]
-    }));
+    let uuids = [...new Set(movedItems.map(i => i.data.id))];
 
-    let results = await Promise.allSettled(
-      plan.map(p => moveItems(collectionId, p.uuids, p.targetAlbumDate, p.targetAlbumName))
-    );
-
-    let okPlan = [];
-    let failures = [];
-    results.forEach((r, i) => {
-      if (r.status === 'fulfilled') okPlan.push(plan[i]);
-      else failures.push({ day: plan[i].day, count: plan[i].items.length, err: r.reason });
-    });
-
-    if (failures.length) {
-      let total = failures.reduce((s, f) => s + f.count, 0);
-      let msg = failures.map(f => `${f.day}: ${f.err?.error?.message || f.err?.message || 'failed'}`).join('<br>');
-      notify(`<strong>${total} item${total > 1 ? 's' : ''} failed to move</strong><br>${msg}`, 'error', -1);
-    }
-
-    if (okPlan.length === 0) {
-      this.#handleGalleryControlsClosed();
+    try {
+      await moveItems(collectionId, uuids, day, descName);
+    } catch (err) {
+      notify(`<strong>Failed to move items</strong><br>${err?.error?.message || err?.message || 'failed'}`, 'error', -1);
       return;
     }
 
-    let successIds = new Set();
-    for (let p of okPlan) {
-      for (let item of p.items) successIds.add(item.data.id);
-    }
-
-    // Update each moved item's albumName to the new value BEFORE deleting
-    // from source albums. This must happen first because deleting all items
-    // from a single-album day tears the day-section down synchronously (via
-    // the pl-album-empty -> #removeAlbum path). If we deferred the albumName
-    // update to the insertion loop below, a recreated section would rebuild
-    // its albums from items still carrying the old albumName.
-    for (let p of okPlan) {
-      for (let item of p.items) item.albumName = p.targetAlbumName;
-    }
-
-    for (let album of this.#allAlbums()) album.deleteItemsByIds(successIds);
-
-    for (let p of okPlan) {
-      for (let item of p.items) {
-        item.elem = undefined;
-        if (item.layout) item.layout.selected = false;
+    // Relabel the affected day's raw items (the objects groupConsecutiveByAlbum
+    // reads) so the rebuild groups them under the new album name. Match by id.
+    let section = this.#daySections.find(s => s.day === day);
+    if (section) {
+      let movedIds = new Set(uuids);
+      for (let item of section.items) {
+        if (movedIds.has(item.data.id)) item.albumName = descName;
       }
+      // Reassign items (fresh array) to trigger #paintAlbums, which re-groups
+      // and fires pl-day-section-albums-changed. #handleSectionAlbumsChanged
+      // then clears selection, re-attaches listeners, and repaints.
+      section.items = section.items.slice();
     }
 
-    for (let p of okPlan) {
-      let section = this.#daySections.find(s => s.day === p.day);
+    let n = movedItems.length;
+    notify(`${n} item${n > 1 ? 's' : ''} moved`, 'success');
 
-      // The source day-section may have been torn down during the deletes
-      // above if every one of its albums emptied (e.g. selecting all items
-      // from a single-album day and moving them to a new album). Recreate it
-      // in the correct chronological (day DESC) position so the moved items
-      // have somewhere to render.
-      if (!section) {
-        section = this.#recreateDaySection(p.day);
-      }
-      if (!section) continue;
-
-      let existingAlbum = section.albums.find(a => a.album_name === p.targetAlbumName);
-      if (existingAlbum) {
-        existingAlbum.addNewItems(p.items.map(i => ({
-          data: i.data, layout: {}, day: p.day,
-          albumDate: p.day, albumName: p.targetAlbumName
-        })));
-      } else {
-        let newAlbumMaxT = Math.max(0, ...p.items
-          .filter(i => i.data?.hasTime)
-          .map(i => i.data.t || 0));
-
-        let insertBefore = section.albums.find(a => this.#albumMaxT(a) < newAlbumMaxT);
-
-        // Wrap and sort into the same time-DESC (epoch t) order used by
-        // existing albums (via pl-album.addNewItems) and the DB's initial
-        // fetch. Without this, a freshly-created album would show items in
-        // selection order, not reverse-time order.
-        let newAlbumData = p.items.map(i => ({
-          data: i.data, layout: {}, day: p.day,
-          albumDate: p.day, albumName: p.targetAlbumName
-        }));
-        newAlbumData.sort(customElements.get('pl-album').byTimeDesc);
-
-        let newAlbum = Object.assign(document.createElement('pl-album'), {
-          id: `${p.day}-${(p.targetAlbumName || '').replaceAll(/[\s/&]/gi, '_') || 'unnamed'}`,
-          album_name: p.targetAlbumName,
-          album_date: p.day,
-          data: newAlbumData,
-          width: this.shadowRoot.getElementById('gallery').clientWidth,
-          collectionId,
-          placeholderText: this.#placeholderText
-        });
-        this.#attachAlbumListeners(newAlbum);
-
-        let albumsContainer = section.shadowRoot.getElementById('albums');
-        if (insertBefore) {
-          albumsContainer.insertBefore(newAlbum, insertBefore);
-          let idx = section.albums.indexOf(insertBefore);
-          section.albums.splice(idx, 0, newAlbum);
-        } else {
-          albumsContainer.appendChild(newAlbum);
-          section.albums.push(newAlbum);
-        }
-      }
-    }
-
-    requestAnimationFrame(() => {
-      this.#selectivelyPaintAlbums();
-      this.#pushIndexLayout();
-    });
-
-    let movedCnt = okPlan.reduce((s, p) => s + p.items.length, 0);
-    notify(`${movedCnt} item${movedCnt > 1 ? 's' : ''} moved`, 'success');
-
-    if (failures.length === 0) {
-      this.#handleGalleryControlsClosed();
-    }
+    // Rebuild dispatches pl-day-section-albums-changed which clears the
+    // controls; if there was no matching section (shouldn't happen), close
+    // the controls explicitly.
+    if (!section) this.#handleGalleryControlsClosed();
   }
 
   #handleGalleryControlsClosed = () => {
@@ -678,7 +579,7 @@ class PlGallery extends HTMLElement {
       // remove all day sections
       for (let s of this.#daySections) s.remove();
       this.#daySections = [];
-      this.#albumsInBuffer = {};
+      this.#albumsInBuffer.clear();
       this.#updateTrashCount();
       this.#pushIndexLayout();
       notify('Trash emptied', 'success');
@@ -715,7 +616,7 @@ class PlGallery extends HTMLElement {
       if (idx !== -1) {
         albumEl.remove();
         section.albums.splice(idx, 1);
-        delete this.#albumsInBuffer[albumEl.id];
+        this.#albumsInBuffer.delete(albumEl);
 
         // If the day-section is now empty, remove it too
         if (section.albums.length === 0) {
@@ -730,41 +631,6 @@ class PlGallery extends HTMLElement {
     }
 
     this.#handleAlbumHeightChange();
-  }
-
-  // Recreate an empty day-section for `day`, inserted in the correct
-  // chronological (day DESC) position in both the DOM and #daySections. Used
-  // by the move flow when a source section was torn down because all its
-  // albums emptied, but it is still needed as a move target. Returns the new
-  // section (or the existing one if it somehow still exists). The caller adds
-  // the moved album(s) into it.
-  #recreateDaySection(day) {
-    let existing = this.#daySections.find(s => s.day === day);
-    if (existing) return existing;
-
-    let galleryEl = this.shadowRoot.getElementById('gallery');
-    let section = Object.assign(document.createElement('pl-day-section'), {
-      day,
-      width: galleryEl.clientWidth,
-      readOnly: this.#mode === 'trash',
-      collectionId: this.#query.collectionId,
-      placeholderText: this.#placeholderText,
-      items: []
-    });
-
-    // Sections are ordered day DESC (newest first), matching the initial
-    // render. Insert before the first section whose day is older than `day`.
-    let insertBeforeSection = this.#daySections.find(s => s.day < day);
-    if (insertBeforeSection) {
-      galleryEl.insertBefore(section, insertBeforeSection);
-      let idx = this.#daySections.indexOf(insertBeforeSection);
-      this.#daySections.splice(idx, 0, section);
-    } else {
-      galleryEl.appendChild(section);
-      this.#daySections.push(section);
-    }
-
-    return section;
   }
 
   #selectivelyPaintAlbums(forceRepaint = true) {
@@ -797,23 +663,23 @@ class PlGallery extends HTMLElement {
           // (only matters during scroll, not for forced repaints).
           if (
             !forceRepaint &&
-            this.#albumsInBuffer[album.id] === 'full' &&
+            this.#albumsInBuffer.get(album) === 'full' &&
             albumBottomInBuffer && albumTopInBuffer
           ) {
             continue;
           }
 
           if (albumEncompassesBuffer) {
-            this.#albumsInBuffer[album.id] = 'buffer-overflow';
+            this.#albumsInBuffer.set(album, 'buffer-overflow');
             album.selectivelyPaintLayout(bufferTop, bufferBottom, albumTop);
           } else if (albumBottomInBuffer || albumTopInBuffer) {
             album.selectivelyPaintLayout(bufferTop, bufferBottom, albumTop);
-            this.#albumsInBuffer[album.id] =
-              (albumBottomInBuffer && albumTopInBuffer) ? 'full' : 'partial';
+            this.#albumsInBuffer.set(album,
+              (albumBottomInBuffer && albumTopInBuffer) ? 'full' : 'partial');
           } else {
-            if (this.#albumsInBuffer[album.id]) {
+            if (this.#albumsInBuffer.has(album)) {
               album.selectivelyPaintLayout(bufferTop, bufferBottom, albumTop);
-              delete this.#albumsInBuffer[album.id];
+              this.#albumsInBuffer.delete(album);
             }
           }
         }
@@ -821,10 +687,10 @@ class PlGallery extends HTMLElement {
         // Day-section out of buffer entirely. Unpaint any of its albums
         // that were previously painted.
         for (let album of section.albums) {
-          if (this.#albumsInBuffer[album.id]) {
+          if (this.#albumsInBuffer.has(album)) {
             let albumTop = section.offsetTop + album.offsetTop + scrollTop;
             album.selectivelyPaintLayout(bufferTop, bufferBottom, albumTop);
-            delete this.#albumsInBuffer[album.id];
+            this.#albumsInBuffer.delete(album);
           }
         }
       }

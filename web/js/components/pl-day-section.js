@@ -123,7 +123,6 @@ class PlDaySection extends HTMLElement {
       }));
 
       let album = Object.assign(document.createElement('pl-album'), {
-        id: this.#albumElementId(g.albumName),
         album_name: g.albumName,
         album_date: this.#day,
         data: albumData,
@@ -141,12 +140,6 @@ class PlDaySection extends HTMLElement {
       bubbles: true, composed: true,
       detail: { day: this.#day, albums: this.#albums }
     }));
-  }
-
-  // Each (day, album) pair needs a stable DOM id. Mirror the gallery's
-  // sanitization for compatibility with the existing remove-by-id flow.
-  #albumElementId(albumPath) {
-    return `${this.#day}-${albumPath.replaceAll(/[\s/&]/gi, '_')}`;
   }
 
   // Called by the gallery when scroll/buffer position changes. Computes the
@@ -205,6 +198,7 @@ class PlDaySection extends HTMLElement {
     this.#items = Array.isArray(_) ? _ : [];
     if (this.isConnected) this.#paintAlbums();
   }
+  get items() { return this.#items; }
 
   set width(_) {
     this.#width = +_ || 0;

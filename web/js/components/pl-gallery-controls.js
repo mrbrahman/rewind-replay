@@ -6,6 +6,7 @@ class PlGalleryControls extends HTMLElement {
   #ctr; #rating; #allPrivate = false; #mode = 'default'; #selectedAlbums = {}; #closeWatcher;
   #collectionId = null;
   #placeholderText = '';
+  #multiDay = false;
 
   static template = document.createElement('template');
   static {
@@ -60,7 +61,7 @@ class PlGalleryControls extends HTMLElement {
       </div>
 
       <sl-dialog label="Organize selected items">
-        <p id="organize-help">Enter an album name. Each selected day will get its own folder with this name.</p>
+        <p id="organize-help">Enter an album name. The selected items get their own folder with this name.</p>
         <input id="organize-input" list="organize-suggestions" autocomplete="off" spellcheck="false" placeholder="Album name (or leave blank)" />
         <datalist id="organize-suggestions"></datalist>
         <sl-button id="save" slot="footer" variant="primary">Save</sl-button>
@@ -131,8 +132,8 @@ class PlGalleryControls extends HTMLElement {
     this.shadowRoot.getElementById("organize")
     .addEventListener('click', ()=>{
       // In timeline view the dialog takes only the descriptive part of the
-      // album name; the gallery infers the day(s) from selected items and
-      // builds full folder paths server-side. Always start empty.
+      // album name; the gallery infers the day from selected items and
+      // builds the full folder path server-side. Always start empty.
       inp.value = '';
       dialog.show();
       dialog.addEventListener('sl-after-show', ()=>{
@@ -141,6 +142,7 @@ class PlGalleryControls extends HTMLElement {
     });
 
     this.#paintTrashedButtons();
+    this.#paintOrganizeState();
   }
 
   #handleClose = ()=>{
@@ -290,6 +292,17 @@ class PlGalleryControls extends HTMLElement {
     this.classList.toggle('trash-mode', this.#mode === 'trash');
   }
 
+  // Organize is single-day only. Disable the button and show a hint when the
+  // selection spans more than one day. Rating/private/delete are unaffected.
+  #paintOrganizeState(){
+    let btn = this.shadowRoot.getElementById('organize');
+    if (!btn) return;
+    btn.disabled = this.#multiDay;
+    btn.title = this.#multiDay
+      ? 'Organize works within a single day. Rating, private, and delete still apply.'
+      : 'Organize';
+  }
+
   get ctr(){
     return this.#ctr;
   }
@@ -335,6 +348,16 @@ class PlGalleryControls extends HTMLElement {
   }
   set selectedAlbums(_){
     this.#selectedAlbums = _
+  }
+
+  get multiDay(){
+    return this.#multiDay;
+  }
+  set multiDay(_){
+    this.#multiDay = Boolean(_);
+    if(this.isConnected){
+      this.#paintOrganizeState();
+    }
   }
 
   get collectionId() { return this.#collectionId; }

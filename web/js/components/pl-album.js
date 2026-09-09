@@ -561,30 +561,6 @@ class PlAlbum extends HTMLElement {
     this.#data = _;
   }
 
-  // this method is exposed
-  // Comparator for album time-DESC order, matching the DB's initial-fetch
-  // ordering (captured_at DESC, i.e. epoch t DESC). Items without a capture
-  // time have t === 0 and naturally sink to the bottom. Shared with the
-  // gallery's move flow so freshly-created target albums use the same
-  // ordering as existing ones.
-  static byTimeDesc(a, b) {
-    return (b.data?.t || 0) - (a.data?.t || 0);
-  }
-
-  addNewItems = (items)=>{
-    this.data.push(...items);
-
-    // Re-sort to keep the album in time-DESC order.
-    this.data.sort(PlAlbum.byTimeDesc);
-
-    this.#doLayout();
-    if(this.#paint_layout){
-      this.#paintLayout()
-    }
-    this.#updateAlbumSelect();
-    this.#refreshTimeWindow();
-  }
-
   get album_name_height(){
     return this.#album_name_height;
   }
