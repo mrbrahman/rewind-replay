@@ -123,7 +123,7 @@ class PlDaySection extends HTMLElement {
       }));
 
       let album = Object.assign(document.createElement('pl-album'), {
-        album_name: g.albumName,
+        albumName: g.albumName,
         album_date: this.#day,
         data: albumData,
         width: this.#width,

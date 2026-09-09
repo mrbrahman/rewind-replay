@@ -1,5 +1,5 @@
 import { notify, throttle } from '../utils.mjs';
-import { updateAlbumName, searchForExistingAlbums } from '../api/albums-api.mjs';
+import { searchForExistingAlbums } from '../api/albums-api.mjs';
 import { isPlaceholder } from '../album-path.mjs';
 
 import sheet from "./styles/pl-album-name.css" with { type: "css" };
@@ -130,22 +130,16 @@ class PlAlbumName extends HTMLElement {
       return;
     }
 
-    try {
-      await updateAlbumName(this.#collectionId, this.#albumDate, this.#albumName, newAlbumName);
-      this.albumName = newAlbumName;
-      this.#exitEditMode();
-      notify('Album name updated successfully', 'success');
-    } catch(err) {
-      if (err.error?.code === "FOLDER_EXISTS") {
-        // Bubble up the descriptive name only. Gallery's move flow takes
-        // a descriptive name and reconstructs the per-day target itself.
-        this.dispatchEvent(new CustomEvent('pl-rename-dir-not-empty', {
-          detail: { newAlbumName }
-        }));
-      } else {
-        notify(`<strong>Error</strong>:</br>${err.error?.code || err.code}`, 'error', -1);
-      }
-    }
+    // The gallery decides how to apply the rename: a plain folder rename when
+    // the day has a single album and the view is not filtered, otherwise the
+    // item-move flow (so renaming one of several same-named clusters only
+    // affects that cluster). It owns success/error UX and the actual server
+    // call, since only it knows the day's album count and the current mode.
+    this.#exitEditMode();
+    this.dispatchEvent(new CustomEvent('pl-album-rename-requested', {
+      bubbles: true, composed: true,
+      detail: { currAlbumName: this.#albumName, newAlbumName }
+    }));
   }
 
   #handleCancel = () => {

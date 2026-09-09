@@ -23,6 +23,7 @@
 import { throttle, notify, showConfirmDialog, showProgress, hideProgress } from '../utils.mjs';
 import { searchItems, getTrashedItems, searchByGpsCoordinates, getAllItems } from '../api/search-api.mjs';
 import { updateRating, trashItems, togglePrivate, restoreFromTrash, cleanupTrash, emptyTrash, moveItems } from '../api/media-api.mjs';
+import { updateAlbumName } from '../api/albums-api.mjs';
 
 import './pl-gallery-index.js';
 
@@ -214,6 +215,7 @@ class PlGallery extends HTMLElement {
     // day-section rebuilds its albums (mode toggle).
     this.#attachAllAlbumListeners();
     galleryEl.addEventListener('pl-day-section-albums-changed', this.#handleSectionAlbumsChanged);
+    galleryEl.addEventListener('pl-album-rename-requested', this.#handleAlbumRenameRequested);
 
     // Hand the index its data and listen for jump-to-day clicks and scrub.
     let indexEl = this.shadowRoot.getElementById('gallery-index');
@@ -292,9 +294,6 @@ class PlGallery extends HTMLElement {
     album.addEventListener('pl-album-height-changed', this.#handleAlbumHeightChange);
     album.addEventListener('pl-album-empty', this.#removeAlbum);
     album.addEventListener('pl-album-item-selected', this.#handleItemsSelected);
-    album.addEventListener('pl-album-move-selected-items', (evt) => {
-      this.#createOrMoveSelectedItems(evt.detail.newAlbumName.trim());
-    });
   }
 
   #handleSectionAlbumsChanged = () => {
@@ -444,7 +443,6 @@ class PlGallery extends HTMLElement {
   // single album, etc. No manual album insertion/positioning needed.
   #createOrMoveSelectedItems = async (descName) => {
     descName = (descName || '').trim();
-    let collectionId = this.#query.collectionId;
 
     let movedItems = this.#itemsSelected.slice();
     if (movedItems.length === 0) return;
@@ -456,37 +454,118 @@ class PlGallery extends HTMLElement {
       return;
     }
     let day = [...days][0];
-
     let uuids = [...new Set(movedItems.map(i => i.data.id))];
 
+    let ok = await this.#moveItemsToAlbum(day, uuids, descName);
+    if (!ok) return;
+
+    let n = uuids.length;
+    notify(`${n} item${n > 1 ? 's' : ''} moved`, 'success');
+
+    // If no matching section existed to rebuild (shouldn't happen), close the
+    // controls explicitly. Otherwise the rebuild's pl-day-section-albums-changed
+    // clears them.
+    if (!this.#daySections.find(s => s.day === day)) this.#handleGalleryControlsClosed();
+  }
+
+  // Move the given items (uuids) to (day, albumName) on the server, then
+  // relabel the affected day's raw items and rebuild its albums via
+  // groupConsecutiveByAlbum. Returns true on success. Shared by the organize
+  // flow and the rename-as-move path. Item-scoped, so it only affects the
+  // given items (e.g. one same-named cluster among several).
+  #moveItemsToAlbum = async (day, uuids, albumName) => {
+    albumName = (albumName || '').trim();
+    let collectionId = this.#query.collectionId;
+
     try {
-      await moveItems(collectionId, uuids, day, descName);
+      await moveItems(collectionId, uuids, day, albumName);
     } catch (err) {
       notify(`<strong>Failed to move items</strong><br>${err?.error?.message || err?.message || 'failed'}`, 'error', -1);
-      return;
+      return false;
     }
 
-    // Relabel the affected day's raw items (the objects groupConsecutiveByAlbum
-    // reads) so the rebuild groups them under the new album name. Match by id.
     let section = this.#daySections.find(s => s.day === day);
     if (section) {
       let movedIds = new Set(uuids);
       for (let item of section.items) {
-        if (movedIds.has(item.data.id)) item.albumName = descName;
+        if (movedIds.has(item.data.id)) item.albumName = albumName;
       }
       // Reassign items (fresh array) to trigger #paintAlbums, which re-groups
       // and fires pl-day-section-albums-changed. #handleSectionAlbumsChanged
       // then clears selection, re-attaches listeners, and repaints.
       section.items = section.items.slice();
     }
+    return true;
+  }
 
-    let n = movedItems.length;
-    notify(`${n} item${n > 1 ? 's' : ''} moved`, 'success');
+  // Apply an album rename requested from a pl-album-name (bubbled up). Chooses
+  // between a plain folder rename and the item-move flow:
+  //   - Not filtered (search) view AND the day has exactly one album ->
+  //     folder rename (efficient single mv on disk). On FOLDER_EXISTS, prompt
+  //     to merge into the existing album via the move flow.
+  //   - Otherwise -> move flow, scoped to this cluster's items, so renaming
+  //     one of several same-named clusters (e.g. one 'TBD' of two) only
+  //     affects that cluster.
+  #handleAlbumRenameRequested = async (evt) => {
+    let { currAlbumName, newAlbumName } = evt.detail;
+    newAlbumName = (newAlbumName || '').trim();
 
-    // Rebuild dispatches pl-day-section-albums-changed which clears the
-    // controls; if there was no matching section (shouldn't happen), close
-    // the controls explicitly.
-    if (!section) this.#handleGalleryControlsClosed();
+    let albumEl = evt.composedPath().find(el => el.tagName?.toLowerCase() === 'pl-album');
+    if (!albumEl) return;
+
+    let section = this.#daySections.find(s => s.albums.includes(albumEl));
+    if (!section) return;
+    let day = section.day;
+
+    let clusterUuids = (albumEl.data || []).map(i => i.data.id);
+    if (clusterUuids.length === 0) return;
+
+    let singleAlbumDay = section.albums.length === 1;
+    let filtered = this.#mode === 'search';
+
+    // Move flow: multiple albums in the day, or a filtered view (visible
+    // items are a subset of the folder).
+    if (!singleAlbumDay || filtered) {
+      let ok = await this.#moveItemsToAlbum(day, clusterUuids, newAlbumName);
+      if (ok) {
+        let n = clusterUuids.length;
+        notify(`${n} item${n > 1 ? 's' : ''} moved to "${newAlbumName}"`, 'success');
+      }
+      return;
+    }
+
+    // Folder-rename flow: single album, unfiltered.
+    let collectionId = this.#query.collectionId;
+    try {
+      await updateAlbumName(collectionId, day, currAlbumName, newAlbumName);
+    } catch (err) {
+      if (err?.error?.code === 'FOLDER_EXISTS') {
+        let result = await showConfirmDialog(
+          'Move items?',
+          'An album with that name already exists on this day. Move these items into it?',
+          'Yes',
+          'No'
+        );
+        if (result === 1) {
+          let ok = await this.#moveItemsToAlbum(day, clusterUuids, newAlbumName);
+          if (ok) notify('Items moved', 'success');
+        }
+      } else {
+        notify(`<strong>Failed to rename album</strong><br>${err?.error?.message || err?.message || 'failed'}`, 'error', -1);
+      }
+      return;
+    }
+
+    // Rename succeeded. Single unfiltered album, so grouping is unchanged -
+    // only the name differs. Avoid a full day-section rebuild/repaint: update
+    // the model (section.items) in place and set the album's name property,
+    // which reflects to the album-name attribute and refreshes the child label.
+    let renamedIds = new Set(clusterUuids);
+    for (let item of section.items) {
+      if (renamedIds.has(item.data.id)) item.albumName = newAlbumName;
+    }
+    albumEl.albumName = newAlbumName;
+    notify('Album renamed', 'success');
   }
 
   #handleGalleryControlsClosed = () => {
@@ -1128,7 +1207,7 @@ class PlGallery extends HTMLElement {
     let slideshowData = [];
     for (let section of this.#daySections) {
       for (let album of section.albums) {
-        slideshowData.push({ album: album.album_name, items: album.data });
+        slideshowData.push({ album: album.albumName, items: album.data });
       }
     }
 

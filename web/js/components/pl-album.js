@@ -1,14 +1,13 @@
 
-// <pl-album album_name='Album 1' width=1000 gutterspace=4 paintlayout width=500 data="[{id: 1, ar:1}, {id:2, ar: 1.33}, {id:5, ar:0.82}]"></pl-album>
+// <pl-album album-name='Album 1' width=1000 gutterspace=4 paintlayout width=500 data="[{id: 1, ar:1}, {id:2, ar: 1.33}, {id:5, ar:0.82}]"></pl-album>
 
-import { notify, showConfirmDialog } from '../utils.mjs';
 import { formatTimeWindow } from '../album-path.mjs';
 
 import sheet from "./styles/pl-album.css" with { type: "css" };
 
 class PlAlbum extends HTMLElement {
   
-  #width; #paint_layout = false; #gutterspace = 4; #data; #album_name;
+  #width; #paint_layout = false; #gutterspace = 4; #data; #albumName;
   #album_date = '';
   // Fixed in CSS (pl-album-name.css :host { height: 36px }). Keep this in
   // sync with that value - it's used in layout math to leave room for the
@@ -26,7 +25,7 @@ class PlAlbum extends HTMLElement {
   }
   
   static get observedAttributes() {
-    return ['paint_layout','album_name','width','gutterspace','data','data_src'];
+    return ['paint_layout','album-name','width','gutterspace','data','data_src'];
   }
   
   constructor() {
@@ -66,8 +65,8 @@ class PlAlbum extends HTMLElement {
       case 'paint_layout':
         this.paint_layout = newValue == null ? false : true;
         break;
-      case 'album_name':
-        this.album_name = newValue;
+      case 'album-name':
+        this.albumName = newValue;
         break;
       case 'data':
         this.data = JSON.parse(newValue)
@@ -491,14 +490,13 @@ class PlAlbum extends HTMLElement {
 
   #paintName(){
     let a = document.createElement('pl-album-name');
-    a.albumName = this.album_name;
+    a.albumName = this.albumName;
     a.albumDate = this.#album_date;
     a.readOnly = this.readOnly;
     a.collectionId = this.#collectionId;
     a.placeholderText = this.#placeholderText;
     a.timeWindow = formatTimeWindow(this.data || []);
     a.style.height = this.album_name_height + 'px';
-    a.addEventListener('pl-rename-dir-not-empty', this.#handleDirNotEmptyDuringRename)
 
     this.shadowRoot.getElementById('container').appendChild(a);
   }
@@ -509,20 +507,6 @@ class PlAlbum extends HTMLElement {
     if (nameEl) nameEl.timeWindow = formatTimeWindow(this.data || []);
   }
 
-  #handleDirNotEmptyDuringRename = async (evt)=>{ 
-    const result = await showConfirmDialog(
-      'Move items?',
-      'The new album name already exists. Do you want to move all items to that album?',
-      'Yes',
-      'No'
-    );
-
-    if(result === 1){
-      this.#handleSelectAll(true);
-      this.dispatchEvent(new CustomEvent('pl-album-move-selected-items', {detail: {newAlbumName: evt.detail.newAlbumName}}));
-    }
-  }
-
   // boilerplate
   get paint_layout(){
     return this.#paint_layout;
@@ -531,11 +515,24 @@ class PlAlbum extends HTMLElement {
     this.#paint_layout = _;
   }
 
-  get album_name(){
-    return this.#album_name;
+  get albumName(){
+    return this.#albumName;
   }
-  set album_name(_){
-    this.#album_name = _;
+  set albumName(_){
+    this.#albumName = _;
+    // Reflect to the album-name attribute (guarded to avoid re-triggering
+    // attributeChangedCallback). Keeps the DOM self-describing in the
+    // inspector and correct after a rename.
+    let attrVal = _ == null ? '' : String(_);
+    if (this.getAttribute('album-name') !== attrVal) {
+      this.setAttribute('album-name', attrVal);
+    }
+    // Keep the child label in sync when connected (a rename updates the
+    // visible name without a full album rebuild).
+    if (this.isConnected) {
+      let nameEl = this.shadowRoot.querySelector('pl-album-name');
+      if (nameEl) nameEl.albumName = _;
+    }
   }
   
   get width(){
