@@ -1218,11 +1218,16 @@ class PlGallery extends HTMLElement {
     this.#persistLayoutMode(mode);
     for (let section of this.#daySections) section.layoutMode = mode;
 
-    // Reflow settled synchronously (each album recomputed on set). Repaint the
-    // visible buffer, refresh the index geometry, then restore the anchor.
-    this.#selectivelyPaintAlbums();
-    this.#pushIndexLayout();
-
+    // Correct scrollTop to restore the anchor BEFORE painting. The new
+    // per-item offsets are already set (each album relayouts synchronously on
+    // the layoutMode set above), so #itemGalleryTop reads the new layout. If we
+    // painted first (against the old scrollTop but the new, much taller
+    // layout), visible thumbs near the pinch would test out-of-buffer, get
+    // evicted (x.elem removed + nulled), then be recreated by a later paint --
+    // recreating the <img> re-fires its load and the blur-in animation. Fixing
+    // the scroll position first means visible thumbs stay in-buffer and go
+    // through #paintItem's update branch (reposition/restyle the existing
+    // <img>, same src, no reload/blur).
     if (anchorId != null && anchorOffsetInView != null) {
       let newTop = this.#itemGalleryTop(anchorId);
       if (newTop != null) {
@@ -1230,12 +1235,10 @@ class PlGallery extends HTMLElement {
       }
     }
 
-    // A second repaint after the scroll adjust so newly-exposed rows paint.
-    requestAnimationFrame(() => {
-      this.#selectivelyPaintAlbums();
-      this.#updateNavBtnState();
-      this.#pushIndexLayout();
-    });
+    // Single paint against the corrected scroll position.
+    this.#selectivelyPaintAlbums();
+    this.#updateNavBtnState();
+    this.#pushIndexLayout();
   }
 
   // Viewport-space top of an item, using the same geometry as #getThumbRect.

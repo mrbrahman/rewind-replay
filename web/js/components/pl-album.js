@@ -497,7 +497,7 @@ class PlAlbum extends HTMLElement {
 
     this.data.forEach(x=>{
 
-      let thumbTop = albumTop + x.layout.offsetHeight, thumbBottom = thumbTop + x.height;
+      let thumbTop = albumTop + x.layout.offsetHeight, thumbBottom = thumbTop + x.layout.height;
       
       // add/remove/leave as is from DOM as appropriate
       if ((thumbTop    >= bufferTop && thumbTop    <= bufferBottom) ||
