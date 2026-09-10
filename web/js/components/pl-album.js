@@ -14,6 +14,14 @@ class PlAlbum extends HTMLElement {
   // sticky header above the thumbs.
   #album_name_height = 36; #album_height; #readOnly = false; #collectionId = null;
   #placeholderText = '';
+  // Layout mode: 'aspect' (justified, aspect-ratio preserving) or 'square'
+  // (uniform square grid, used on mobile viewports). Both modes populate the
+  // same item.layout shape (width/height/trX/trY/offsetHeight) so the
+  // gallery's hit-testing, drag-select sweep, and scroll helpers work
+  // unchanged in either mode.
+  #layoutMode = 'aspect';
+  // Fixed column count for the square grid (mobile only).
+  #squareCols = 3;
 
   static template = document.createElement('template');
   static {
@@ -310,23 +318,32 @@ class PlAlbum extends HTMLElement {
   }
 
   
+  // Layout-density breakpoints (album rendered width, px). The justified
+  // (aspect) layout uses these to decide how tightly to pack rows -- narrower
+  // widths (phones) pack fewer, larger thumbs; wider widths pack more. These
+  // are about visual density at a given width and are unrelated to the
+  // gallery's MOBILE_MAX_WIDTH feature toggle (which keys off viewport width).
+  static LAYOUT_WIDTH_PHONE = 640;
+  static LAYOUT_WIDTH_TABLET = 1280;
+  static LAYOUT_WIDTH_DESKTOP = 1920;
+
   #getMinAspectRatio(){
-    if (this.width <= 640) {
+    if (this.width <= PlAlbum.LAYOUT_WIDTH_PHONE) {
       return 1.5;
-    } else if (this.width <= 1280) {
+    } else if (this.width <= PlAlbum.LAYOUT_WIDTH_TABLET) {
       return 4;
-    } else if (this.width <= 1920) {
+    } else if (this.width <= PlAlbum.LAYOUT_WIDTH_DESKTOP) {
       return 5;
     }
     return 6;
   }
 
   #getMinThumbWidth(){
-    if (this.width <= 640) {
+    if (this.width <= PlAlbum.LAYOUT_WIDTH_PHONE) {
       return 120;
-    } else if (this.width <= 1280) {
+    } else if (this.width <= PlAlbum.LAYOUT_WIDTH_TABLET) {
       return 120;
-    } else if (this.width <= 1920) {
+    } else if (this.width <= PlAlbum.LAYOUT_WIDTH_DESKTOP) {
       return 130;
     }
     return 140;
@@ -365,7 +382,23 @@ class PlAlbum extends HTMLElement {
     return trY;
   }
 
+  // Dispatch to the layout for the current mode. Both layouts populate the
+  // same item.layout shape (width/height/trX/trY/offsetHeight) so all gallery
+  // geometry consumers (hit-testing, sweep, getThumbRect, scrollToItem) work
+  // unchanged regardless of mode.
   #doLayout(){
+    if (this.#layoutMode === 'square') {
+      this.#doSquareLayout();
+    } else {
+      this.#doAspectLayout();
+    }
+  }
+
+  // Justified, aspect-ratio-preserving layout (pig.js style): items flow into
+  // rows whose height is chosen so each row fills the width while keeping every
+  // item's original aspect ratio. Used on desktop and as the pinch "zoom in"
+  // mode on mobile.
+  #doAspectLayout(){
     let minAspectRatio = this.#getMinAspectRatio(), minThumbWidth = this.#getMinThumbWidth(),
       row = [], rowAspectRatio = 0, minAR = Infinity,
       trX = 0, trY = this.album_name_height;
@@ -416,8 +449,50 @@ class PlAlbum extends HTMLElement {
     this.shadowRoot.getElementById('container').style.height = this.album_height+'px';
   }
 
+  // Uniform square-grid layout used on mobile viewports. Every cell is the
+  // same square size; #squareCols cells per row. Populates the same
+  // item.layout shape as #doAspectLayout so all gallery geometry consumers
+  // (hit-testing, sweep, getThumbRect, scrollToItem) work unchanged. Since the
+  // served thumbnail keeps its real aspect ratio, pl-thumb crops it to the
+  // square cell via object-fit:cover.
+  #doSquareLayout(){
+    let cols = this.#squareCols;
+    let gutter = this.gutterspace;
+    // Total width minus outer gutters (both edges) and inter-cell gutters.
+    let usable = this.width - gutter * 2 - gutter * (cols - 1);
+    let cell = usable / cols;
+
+    // First row starts one gutter below the sticky album-name header, mirroring
+    // how #flushRow adds a leading gutter before the first justified row.
+    let top0 = this.album_name_height + gutter;
+
+    this.data.forEach((d, i) => {
+      let col = i % cols;
+      let rowIdx = Math.floor(i / cols);
+      let trX = gutter + col * (cell + gutter);
+      let cellTop = top0 + rowIdx * (cell + gutter);
+
+      d.layout = {
+        id: d.data.id,
+        width: cell,
+        height: cell,
+        offsetHeight: cellTop,
+        trX: trX + 'px',
+        trY: cellTop + 'px'
+      };
+    });
+
+    let rows = Math.ceil(this.data.length / cols);
+    // header + leading gutter + rows of cells (with inter-row gutters) +
+    // trailing gutter, matching the justified layout's bottom padding.
+    this.album_height = rows > 0
+      ? top0 + rows * cell + (rows - 1) * gutter + gutter
+      : this.album_name_height;
+    this.shadowRoot.getElementById('container').style.height = this.album_height+'px';
+  }
+
   redoLayout = ()=>this.#doLayout();
-  
+
   selectivelyPaintLayout(bufferTop, bufferBottom, albumTop){
 
     this.data.forEach(x=>{
@@ -467,7 +542,8 @@ class PlAlbum extends HTMLElement {
         hasGps: x.data.hasGps,
         hasDesc: x.data.hasDesc,
         hasTags: x.data.hasTags,
-        selected: x.layout.selected ? x.layout.selected : false
+        selected: x.layout.selected ? x.layout.selected : false,
+        squareMode: this.#layoutMode === 'square'
       });
       elem.style.transform = `translate(${x.layout.trX},${x.layout.trY})`
       
@@ -583,6 +659,22 @@ class PlAlbum extends HTMLElement {
 
   get album_date() { return this.#album_date; }
   set album_date(_) { this.#album_date = _ || ''; }
+
+  get layoutMode() { return this.#layoutMode; }
+  set layoutMode(_) {
+    let newMode = _ === 'square' ? 'square' : 'aspect';
+    if (newMode === this.#layoutMode) return;
+    this.#layoutMode = newMode;
+    if (!this.isConnected) return;
+    // Recompute geometry for the new mode. Positioning/sizing of painted
+    // thumbs is handled by the gallery's #selectivelyPaintAlbums() pass right
+    // after this (via #paintItem's update branch, same as resize). We only set
+    // squareMode here because that flag is not touched by that update branch.
+    this.#doLayout();
+    for (let item of this.data) {
+      if (item.elem) item.elem.squareMode = (newMode === 'square');
+    }
+  }
   
 }
 

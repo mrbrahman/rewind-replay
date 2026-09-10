@@ -114,6 +114,26 @@ class PlGallery extends HTMLElement {
   // wasted fetches during fast scroll.
   #paintBuffer = 3;
 
+  // --- Mobile square-grid layout + pinch-to-zoom -------------------------
+  // On mobile viewports (<= MOBILE_MAX_WIDTH) the gallery defaults to a
+  // uniform square grid and a two-finger pinch toggles between 'square' and
+  // 'aspect' (the justified layout). Above that width the feature is disabled
+  // entirely: mode is forced to 'aspect' and the gesture is ignored.
+  //   #layoutMode      - 'square' | 'aspect' (effective mode currently applied)
+  //   #pinchState      - transient two-finger gesture bookkeeping, or null
+  // NOTE: this is a viewport-width feature toggle (window.innerWidth), distinct
+  // from pl-album's LAYOUT_WIDTH_* density breakpoints (which key off the
+  // album's rendered width). They happen to share the value 640 but mean
+  // different things.
+  // NOTE: 640 is the only viewport breakpoint we currently need in JS. All the
+  // other responsive breakpoints (e.g. the 1280px sidebar-overlay switch) live
+  // in CSS @media queries. If/when JS needs another one, add a new named
+  // constant here rather than reusing this one.
+  static MOBILE_MAX_WIDTH = 640;
+  static LAYOUT_MODE_KEY = 'pl-gallery-layout-mode';
+  #layoutMode = 'aspect';
+  #pinchState = null;
+
   static template = document.createElement('template');
   static {
     this.template.innerHTML = // html
@@ -197,10 +217,16 @@ class PlGallery extends HTMLElement {
 
     let galleryEl = this.shadowRoot.getElementById('gallery');
 
+    // Decide the effective layout mode before building sections. On mobile
+    // viewports honor the persisted choice (default 'square'); above the
+    // mobile breakpoint always use 'aspect'.
+    this.#layoutMode = this.#resolveInitialLayoutMode();
+
     this.#daySections = this.#data.map(d => {
       let section = Object.assign(document.createElement('pl-day-section'), {
         day: d.day,
         width: galleryEl.clientWidth,
+        layoutMode: this.#layoutMode,
         readOnly: this.#mode === 'trash',
         collectionId: this.#query.collectionId,
         placeholderText: this.#placeholderText,
@@ -269,6 +295,13 @@ class PlGallery extends HTMLElement {
     // stay targeted at the thumb where the press began, so following the
     // finger across thumbs requires gallery-level hit-testing.
     this.addEventListener('pl-thumb-longpress-armed', this.#handleLongPressArmed);
+    // Two-finger pinch to toggle square/aspect layout (mobile only). Registered
+    // on the gallery element (the scroll container). touchmove is non-passive
+    // because a pinch must preventDefault to stop the browser's page zoom.
+    galleryEl.addEventListener('touchstart', this.#handlePinchStart, { passive: false });
+    galleryEl.addEventListener('touchmove', this.#handlePinchMove, { passive: false });
+    galleryEl.addEventListener('touchend', this.#handlePinchEnd);
+    galleryEl.addEventListener('touchcancel', this.#handlePinchEnd);
     this.shadowRoot.getElementById('next-album-btn').addEventListener('click', this.#scrollToNextAlbum);
     this.shadowRoot.getElementById('prev-album-btn').addEventListener('click', this.#scrollToPrevAlbum);
     window.addEventListener('resize', this.#throttleHandleResize);
@@ -1137,7 +1170,176 @@ class PlGallery extends HTMLElement {
   }
   // --- end drag-select sweep ---------------------------------------------
 
+  // --- Mobile square-grid layout + pinch-to-zoom -------------------------
+
+  #isMobileViewport() {
+    return window.innerWidth <= this.constructor.MOBILE_MAX_WIDTH;
+  }
+
+  // Effective mode at render time: above the mobile breakpoint always
+  // 'aspect'; on mobile the persisted choice, defaulting to 'square'.
+  #resolveInitialLayoutMode() {
+    if (!this.#isMobileViewport()) return 'aspect';
+    let stored = null;
+    try { stored = localStorage.getItem(this.constructor.LAYOUT_MODE_KEY); } catch (e) { /* ignore */ }
+    return stored === 'aspect' ? 'aspect' : 'square';
+  }
+
+  #persistLayoutMode(mode) {
+    try { localStorage.setItem(this.constructor.LAYOUT_MODE_KEY, mode); } catch (e) { /* ignore */ }
+  }
+
+  // Switch the effective layout mode. Fans the mode out to every day-section
+  // (and thus album), then repaints. Anchors the item under `anchorClientY`
+  // (a viewport y-coordinate) so the same content stays under the user's
+  // fingers across the reflow. Persists the choice.
+  #setLayoutMode(mode, anchorClientY) {
+    mode = mode === 'square' ? 'square' : 'aspect';
+    if (mode === this.#layoutMode) return;
+
+    let galleryEl = this.shadowRoot.getElementById('gallery');
+    let galleryRect = galleryEl.getBoundingClientRect();
+
+    // Find the anchor item currently under anchorClientY (fall back to the
+    // gallery's vertical middle) and remember its offset from the viewport
+    // top so we can restore it after the reflow.
+    let anchorY = (anchorClientY == null) ? galleryRect.top + galleryRect.height / 2 : anchorClientY;
+    let anchor = this.#itemAtPoint(galleryRect.left + galleryRect.width / 2, anchorY)
+              || this.#firstVisibleItem();
+    let anchorOffsetInView = null;
+    let anchorId = null;
+    if (anchor) {
+      anchorId = anchor.item.data.id;
+      let rectTop = this.#itemViewportTop(anchor.section || null, anchor.album, anchor.item);
+      anchorOffsetInView = rectTop - galleryRect.top;
+    }
+
+    this.#layoutMode = mode;
+    this.#persistLayoutMode(mode);
+    for (let section of this.#daySections) section.layoutMode = mode;
+
+    // Reflow settled synchronously (each album recomputed on set). Repaint the
+    // visible buffer, refresh the index geometry, then restore the anchor.
+    this.#selectivelyPaintAlbums();
+    this.#pushIndexLayout();
+
+    if (anchorId != null && anchorOffsetInView != null) {
+      let newTop = this.#itemGalleryTop(anchorId);
+      if (newTop != null) {
+        galleryEl.scrollTop = Math.max(0, newTop - anchorOffsetInView);
+      }
+    }
+
+    // A second repaint after the scroll adjust so newly-exposed rows paint.
+    requestAnimationFrame(() => {
+      this.#selectivelyPaintAlbums();
+      this.#updateNavBtnState();
+      this.#pushIndexLayout();
+    });
+  }
+
+  // Viewport-space top of an item, using the same geometry as #getThumbRect.
+  #itemViewportTop(section, album, item) {
+    let gallery = this.shadowRoot.getElementById('gallery');
+    let galleryRect = gallery.getBoundingClientRect();
+    // section may be unknown (hit-test only returns album+item); find it.
+    let sec = section || this.#daySections.find(s => s.albums.includes(album));
+    if (!sec) return galleryRect.top;
+    return galleryRect.top + sec.offsetTop + album.offsetTop + item.layout.offsetHeight - gallery.scrollTop;
+  }
+
+  // Gallery-content-space top of an item by id (independent of scroll).
+  #itemGalleryTop(id) {
+    for (let section of this.#daySections) {
+      for (let album of section.albums) {
+        let item = album.data.find(x => x.data.id === id);
+        if (item && item.layout) {
+          return section.offsetTop + album.offsetTop + item.layout.offsetHeight;
+        }
+      }
+    }
+    return null;
+  }
+
+  // First painted item intersecting the top of the viewport (anchor fallback).
+  #firstVisibleItem() {
+    let gallery = this.shadowRoot.getElementById('gallery');
+    let scrollTop = gallery.scrollTop;
+    for (let section of this.#daySections) {
+      for (let album of section.albums) {
+        for (let item of album.data) {
+          if (!item.layout || item.layout.offsetHeight == null) continue;
+          let top = section.offsetTop + album.offsetTop + item.layout.offsetHeight;
+          if (top + item.layout.height >= scrollTop) {
+            return { section, album, item };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  #pinchDistance(t0, t1) {
+    let dx = t0.clientX - t1.clientX;
+    let dy = t0.clientY - t1.clientY;
+    return Math.hypot(dx, dy);
+  }
+
+  #handlePinchStart = (evt) => {
+    if (!this.#isMobileViewport()) return;
+    if (evt.touches.length !== 2) return;
+
+    // A pinch is unambiguously not a drag-select (which is single-finger).
+    // If a sweep somehow armed, end it so the two gestures never fight.
+    if (this.#isSweeping) this.#handleSweepEnd();
+
+    evt.preventDefault(); // stop native page zoom
+    let [t0, t1] = evt.touches;
+    this.#pinchState = {
+      startDist: this.#pinchDistance(t0, t1),
+      midY: (t0.clientY + t1.clientY) / 2,
+      fired: false
+    };
+  }
+
+  #handlePinchMove = (evt) => {
+    if (!this.#pinchState) return;
+    if (evt.touches.length !== 2) return;
+    evt.preventDefault();
+
+    let [t0, t1] = evt.touches;
+    let dist = this.#pinchDistance(t0, t1);
+    let ratio = dist / this.#pinchState.startDist;
+
+    // One flip per gesture. Pinch-out (fingers apart) -> aspect (zoom in to
+    // real sizes); pinch-in -> square grid.
+    if (this.#pinchState.fired) return;
+    if (ratio > 1.2) {
+      this.#pinchState.fired = true;
+      this.#setLayoutMode('aspect', this.#pinchState.midY);
+    } else if (ratio < 0.8) {
+      this.#pinchState.fired = true;
+      this.#setLayoutMode('square', this.#pinchState.midY);
+    }
+  }
+
+  #handlePinchEnd = (evt) => {
+    // Clear only when the pinch truly ends (fewer than 2 touches remain).
+    if (evt.touches && evt.touches.length >= 2) return;
+    this.#pinchState = null;
+  }
+  // --- end mobile square-grid layout -------------------------------------
+
   #handleResize() {
+    // Re-evaluate the effective layout mode purely on viewport width. Above
+    // the mobile breakpoint force 'aspect' (feature disabled); at/below it,
+    // honor the persisted choice (default 'square'). This runs before the
+    // width/redoLayout pass so albums lay out in the correct mode.
+    let desired = this.#resolveInitialLayoutMode();
+    if (desired !== this.#layoutMode) {
+      this.#layoutMode = desired;
+      for (let section of this.#daySections) section.layoutMode = desired;
+    }
     for (let section of this.#daySections) {
       section.width = this.shadowRoot.getElementById('gallery').clientWidth;
       section.redoLayout();
@@ -1156,6 +1358,11 @@ class PlGallery extends HTMLElement {
     galleryEl?.removeEventListener('pointerup', this.#handleSweepEnd);
     galleryEl?.removeEventListener('pointercancel', this.#handleSweepEnd);
     this.removeEventListener('pl-thumb-longpress-armed', this.#handleLongPressArmed);
+    galleryEl?.removeEventListener('touchstart', this.#handlePinchStart);
+    galleryEl?.removeEventListener('touchmove', this.#handlePinchMove);
+    galleryEl?.removeEventListener('touchend', this.#handlePinchEnd);
+    galleryEl?.removeEventListener('touchcancel', this.#handlePinchEnd);
+    this.#pinchState = null;
     this.#isSweeping = false;
     this.#stopAutoScroll();
     this.#sweepOrder = null;

@@ -3,6 +3,11 @@ import sheet from "./styles/pl-thumb.css" with { type: "css" };
 class PlThumb extends HTMLElement {
   // instance variables
   #width; #height; #rating=0; #selected=false; #type; #dur; #hasGps; #hasDesc; #hasTags;
+  // When true, the img fills its (square) cell via object-fit:cover instead of
+  // being sized to the exact layout width/height. Set by pl-album per layout
+  // mode. The container is always sized to width/height; only the img styling
+  // differs.
+  #squareMode = false;
 
   // Long-press-to-select state. #longPressTimer is the pending hold timer,
   // #longPressStart is the pointerdown coordinate (for the move-cancel check),
@@ -100,6 +105,7 @@ class PlThumb extends HTMLElement {
     
     // now paint them
     this.#paintSrc();
+    this.#paintImgFit();
     this.#paintRating();
     this.#paintSelected();
     this.#paintVideoBadge();
@@ -270,7 +276,7 @@ class PlThumb extends HTMLElement {
       this.shadowRoot.getElementById('container').style.width = this.width+'px';
       // img element is not present during initial paint
       if (this.shadowRoot.querySelector('img')){
-        this.shadowRoot.querySelector('img').style.width = this.width+'px';
+        this.#paintImgFit();
       }
     }
   }
@@ -279,8 +285,26 @@ class PlThumb extends HTMLElement {
       this.shadowRoot.getElementById('container').style.height = this.height+'px';
       // img element is not present during initial paint
       if(this.shadowRoot.querySelector('img')){
-        this.shadowRoot.querySelector('img').style.height = this.height+'px';
+        this.#paintImgFit();
       }
+    }
+  }
+  // Size the img element per layout mode. In aspect mode the img matches the
+  // container's exact width/height (the served thumbnail's aspect ratio equals
+  // the cell's, so no cropping). In square mode the cell is square but the
+  // served thumbnail is not, so the img fills the cell and object-fit:cover
+  // crops it to a centered square.
+  #paintImgFit(){
+    let img = this.shadowRoot.querySelector('img');
+    if(!img) return;
+    if(this.#squareMode){
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+    } else {
+      img.style.width = this.width+'px';
+      img.style.height = this.height+'px';
+      img.style.objectFit = '';
     }
   }
   #paintSrc(){
@@ -405,6 +429,14 @@ class PlThumb extends HTMLElement {
   set selected(_){
     this.#selected = _;
     this.#paintSelected();
+  }
+
+  get squareMode(){
+    return this.#squareMode;
+  }
+  set squareMode(_){
+    this.#squareMode = Boolean(_);
+    this.#paintImgFit();
   }
 
 }

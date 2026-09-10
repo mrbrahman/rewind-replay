@@ -36,6 +36,7 @@ class PlDaySection extends HTMLElement {
   #readOnly = false;
   #collectionId = null;
   #placeholderText = '';
+  #layoutMode = 'aspect';
 
   static template = document.createElement('template');
   static {
@@ -128,6 +129,7 @@ class PlDaySection extends HTMLElement {
         data: albumData,
         width: this.#width,
         gutterspace: this.#gutterspace,
+        layoutMode: this.#layoutMode,
         readOnly: this.#readOnly,
         collectionId: this.#collectionId,
         placeholderText: this.#placeholderText
@@ -205,6 +207,12 @@ class PlDaySection extends HTMLElement {
     for (let album of this.#albums) album.width = this.#width;
   }
   get width() { return this.#width; }
+
+  set layoutMode(_) {
+    this.#layoutMode = _ === 'square' ? 'square' : 'aspect';
+    for (let album of this.#albums) album.layoutMode = this.#layoutMode;
+  }
+  get layoutMode() { return this.#layoutMode; }
 
   set gutterspace(_) { this.#gutterspace = +_ || 4; }
   get gutterspace() { return this.#gutterspace; }

@@ -41,7 +41,7 @@ sl-rating {
   visibility: hidden;
   top: 5px;
   right: 5px;
-  --symbol-size: 1rem;
+  --symbol-size: 0.8rem;
   --symbol-spacing: 1px;
 }
 
@@ -72,8 +72,8 @@ label:before {
   position: absolute;
   top: 5px;
   left: 5px;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   background-size: contain;
   background-repeat: no-repeat;
   /* Bootstrap Icons: circle (white) */
@@ -110,8 +110,8 @@ label:before {
 }
 
 .info-icon {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   display: inline-block;
   background-size: contain;
   background-repeat: no-repeat;
