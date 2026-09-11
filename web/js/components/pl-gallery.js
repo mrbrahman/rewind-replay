@@ -7,12 +7,24 @@
 
 // Timeline-view design:
 //
+// Component split (see also pl-gallery-layout.js):
+//   - pl-gallery-layout owns everything layout-position-related: the scroller,
+//     the day-sections/albums, windowed thumbnail painting, all geometry
+//     (point hit-testing, thumb-rect lookup, scroll-to helpers, the anchored
+//     layout-mode switch), the gallery-index rail, and the nav buttons.
+//   - pl-gallery (this component) owns the concerns that are singular per
+//     gallery or that span layouts: data fetch, item selection state, the
+//     gallery-controls action bar, the slideshow overlay, drag-select sweep
+//     coordination, and pinch-gesture detection. It hosts one
+//     pl-gallery-layout and delegates geometry/scroll/paint to it.
+//
 // 1. Server returns [{day: 'YYYY-MM-DD', items: [...]}], items already
 //    ordered by datetime DESC within day, with no-time items clustered at
 //    the end (by album + filename).
-// 2. Gallery creates one pl-day-section per day. Each day-section internally
-//    creates pl-album children by walking its items and grouping consecutive
-//    same-album entries (or all same-album entries in 'folder' mode).
+// 2. The layout creates one pl-day-section per day. Each day-section
+//    internally creates pl-album children by walking its items and grouping
+//    consecutive same-album entries (or all same-album entries in 'folder'
+//    mode).
 // 3. Selection state is tracked at the gallery level (across all days/albums).
 //    Gallery owns the controls bar, move/delete orchestration, and slideshow.
 // 4. Per-album event listeners are attached every time the day-section
@@ -25,7 +37,7 @@ import { searchItems, getTrashedItems, searchByGpsCoordinates, getAllItems } fro
 import { updateRating, trashItems, togglePrivate, restoreFromTrash, cleanupTrash, emptyTrash, moveItems } from '../api/media-api.mjs';
 import { updateAlbumName } from '../api/albums-api.mjs';
 
-import './pl-gallery-index.js';
+import './pl-gallery-layout.js';
 
 import sheet from "./styles/pl-gallery.css" with { type: "css" };
 
@@ -33,8 +45,9 @@ class PlGallery extends HTMLElement {
 
   // internal state
   #data = [];                  // [{day, items: [{album, data:{...}, day}]}]
-  #daySections = [];           // pl-day-section elements (one per day)
-  #albumsInBuffer = new Map(); // album element -> 'full' | 'partial' | 'buffer-overflow'
+  // Layout/geometry (day-sections, windowed painting, scroller) now live in
+  // the child pl-gallery-layout (#gallery-layout). pl-gallery reads it via the
+  // #layout getter and delegates all geometry/scroll/paint calls to it.
   #albumsSelectedCnt = {};     // album_name -> count
   #itemsSelected = [];         // selected items across all albums
   // Parallel set of selected item ids, kept in sync with #itemsSelected. Used
@@ -58,25 +71,6 @@ class PlGallery extends HTMLElement {
   #query = {};
   #slideshowItemId = null;
   #placeholderText = '';
-
-  // Scroll-stop debounce for the gallery index (.scrolling class on the
-  // index toggles its visibility). Cleared in disconnectedCallback.
-  #indexScrollTimer = null;
-
-  // Dedup flag for the per-frame marker update. Set when an rAF is pending
-  // so multiple scroll events within the same frame coalesce into one
-  // update.
-  #markerRafPending = false;
-
-  // When true, #selectivelyPaintAlbums is skipped during the throttled
-  // scroll handler. Set during programmatic jumps (tick click, scrub) to
-  // avoid fetching thumbnails for content that flies past during the
-  // animation. Cleared on scrollend.
-  #isJumping = false;
-
-  // Set during scrub (pill drag). Prevents album painting while the user
-  // is dragging fast. Cleared on scrub end, which triggers a final paint.
-  #isScrubbing = false;
 
   // Drag-select sweep state. Armed by a pl-thumb long-press. The sweep selects
   // the range of items between the anchor and the item currently under the
@@ -109,11 +103,6 @@ class PlGallery extends HTMLElement {
   #autoScrollRaf = null;
   #autoScrollVel = 0;
 
-  // Number of viewport-heights above and below to pre-paint thumbnails.
-  // Higher = smoother normal scroll (more pre-fetched), lower = fewer
-  // wasted fetches during fast scroll.
-  #paintBuffer = 3;
-
   // --- Mobile square-grid layout + pinch-to-zoom -------------------------
   // On mobile viewports (<= MOBILE_MAX_WIDTH) the gallery defaults to a
   // uniform square grid and a two-finger pinch toggles between 'square' and
@@ -145,18 +134,25 @@ class PlGallery extends HTMLElement {
           Empty Trash
         </sl-button>
       </div>
-      <div id="gallery"></div>
-      <pl-gallery-index id="gallery-index"></pl-gallery-index>
-      <div id="nav-btns">
-        <sl-icon-button id="prev-album-btn" name="chevron-up" label="Previous album"></sl-icon-button>
-        <sl-icon-button id="next-album-btn" name="chevron-down" label="Next album"></sl-icon-button>
-      </div>
+      <pl-gallery-layout id="gallery-layout"></pl-gallery-layout>
     `;
   }
 
   constructor() {
     super().attachShadow({mode: 'open'});
     this.shadowRoot.adoptedStyleSheets = [sheet];
+  }
+
+  // The child layout component that owns the scroller + day-sections + all
+  // geometry. pl-gallery delegates painting/scroll/hit-testing to it.
+  get #layout() {
+    return this.shadowRoot.getElementById('gallery-layout');
+  }
+
+  // Compatibility accessor: the flat day-section list, owned by the layout.
+  // Many selection/move/slideshow paths walk this; they read through here.
+  get #daySections() {
+    return this.#layout?.daySections || [];
   }
 
   async connectedCallback() {
@@ -205,8 +201,8 @@ class PlGallery extends HTMLElement {
 
   #renderGallery() {
     if (this.#data.length === 0) {
-      this.shadowRoot.getElementById('gallery').innerHTML =
-        '<div style="padding: 2rem; text-align: center; color: var(--text-secondary);">No results found</div>';
+      this.#layout.renderEmpty(
+        '<div style="padding: 2rem; text-align: center; color: var(--text-secondary);">No results found</div>');
       return;
     }
 
@@ -215,51 +211,30 @@ class PlGallery extends HTMLElement {
     const verb = this.#mode === 'search' || this.#mode === 'trash' ? 'Found' : 'Showing';
     notify(`${verb} ${totalItems.toLocaleString()} items in ${albumSet.size.toLocaleString()} albums`);
 
-    let galleryEl = this.shadowRoot.getElementById('gallery');
+    let layout = this.#layout;
 
     // Decide the effective layout mode before building sections. On mobile
     // viewports honor the persisted choice (default 'square'); above the
     // mobile breakpoint always use 'aspect'.
     this.#layoutMode = this.#resolveInitialLayoutMode();
 
-    this.#daySections = this.#data.map(d => {
-      let section = Object.assign(document.createElement('pl-day-section'), {
-        day: d.day,
-        width: galleryEl.clientWidth,
-        layoutMode: this.#layoutMode,
-        readOnly: this.#mode === 'trash',
-        collectionId: this.#query.collectionId,
-        placeholderText: this.#placeholderText,
-        items: d.items
-      });
-      return section;
+    layout.setData(this.#data, {
+      mode: this.#mode,
+      layoutMode: this.#layoutMode,
+      readOnly: this.#mode === 'trash',
+      collectionId: this.#query.collectionId,
+      placeholderText: this.#placeholderText
     });
-
-    galleryEl.append(...this.#daySections);
 
     // Attach listeners to existing album children, and re-attach when a
-    // day-section rebuilds its albums (mode toggle).
+    // day-section rebuilds its albums (mode toggle). Album/day-section events
+    // are composed, so they bubble up through the layout's shadow DOM to here.
     this.#attachAllAlbumListeners();
-    galleryEl.addEventListener('pl-day-section-albums-changed', this.#handleSectionAlbumsChanged);
-    galleryEl.addEventListener('pl-album-rename-requested', this.#handleAlbumRenameRequested);
+    layout.addEventListener('pl-day-section-albums-changed', this.#handleSectionAlbumsChanged);
+    layout.addEventListener('pl-album-rename-requested', this.#handleAlbumRenameRequested);
 
-    // Hand the index its data and listen for jump-to-day clicks and scrub.
-    let indexEl = this.shadowRoot.getElementById('gallery-index');
-    indexEl.data = this.#data;
-    indexEl.addEventListener('pl-gallery-index-jump', this.#handleIndexJump);
-    indexEl.addEventListener('pl-gallery-index-scrub', this.#handleIndexScrub);
-    indexEl.addEventListener('pl-gallery-index-scrub-end', this.#handleIndexScrubEnd);
-
-    // Reset scroll
-    galleryEl.scrollTop = 0;
-
-    // Wait for next frame so flex/flow layout settles before measuring
-    // offsetTop and painting thumbs.
-    requestAnimationFrame(() => {
-      this.#selectivelyPaintAlbums();
-      this.#updateNavBtnState();
-      this.#pushIndexLayout();
-    });
+    // The layout owns the index rail, nav buttons, scroll->paint lifecycle, and
+    // the initial paint (scheduled in layout.setData). Nothing to wire here.
 
     if (this.#mode === 'trash') {
       let trashBar = this.shadowRoot.getElementById('trash-bar');
@@ -276,7 +251,7 @@ class PlGallery extends HTMLElement {
 
     this.addEventListener('pl-slideshow-item-changed', (evt) => {
       evt.stopPropagation();
-      this.#scrollToItem(evt.detail.currentItemId);
+      this.#layout.scrollToItem(evt.detail.currentItemId);
       this.dispatchEvent(new CustomEvent('pl-gallery-slideshow-changed', {
         composed: true, bubbles: true,
         detail: { currentItemId: evt.detail.currentItemId }
@@ -288,22 +263,18 @@ class PlGallery extends HTMLElement {
       this.closeSlideshow(evt.detail.currentItemId);
     });
 
-    galleryEl.addEventListener('scroll', this.#handleScroll);
-    galleryEl.addEventListener('scrollend', this.#handleScrollEnd);
     // Drag-select: a long-press on a thumb arms a sweep. The sweep itself is
     // coordinated here (not per-thumb) because on touch the pointer events
     // stay targeted at the thumb where the press began, so following the
     // finger across thumbs requires gallery-level hit-testing.
     this.addEventListener('pl-thumb-longpress-armed', this.#handleLongPressArmed);
     // Two-finger pinch to toggle square/aspect layout (mobile only). Registered
-    // on the gallery element (the scroll container). touchmove is non-passive
-    // because a pinch must preventDefault to stop the browser's page zoom.
-    galleryEl.addEventListener('touchstart', this.#handlePinchStart, { passive: false });
-    galleryEl.addEventListener('touchmove', this.#handlePinchMove, { passive: false });
-    galleryEl.addEventListener('touchend', this.#handlePinchEnd);
-    galleryEl.addEventListener('touchcancel', this.#handlePinchEnd);
-    this.shadowRoot.getElementById('next-album-btn').addEventListener('click', this.#scrollToNextAlbum);
-    this.shadowRoot.getElementById('prev-album-btn').addEventListener('click', this.#scrollToPrevAlbum);
+    // on the layout host. touchmove is non-passive because a pinch must
+    // preventDefault to stop the browser's page zoom.
+    layout.addEventListener('touchstart', this.#handlePinchStart, { passive: false });
+    layout.addEventListener('touchmove', this.#handlePinchMove, { passive: false });
+    layout.addEventListener('touchend', this.#handlePinchEnd);
+    layout.addEventListener('touchcancel', this.#handlePinchEnd);
     window.addEventListener('resize', this.#throttleHandleResize);
 
     if (this.#slideshowItemId) {
@@ -311,10 +282,9 @@ class PlGallery extends HTMLElement {
     }
   }
 
-  // Walk all day-sections to get the flat album list. Used for selective
-  // painting and any cross-album operation.
+  // Walk all day-sections to get the flat album list (delegates to layout).
   #allAlbums() {
-    return this.#daySections.flatMap(s => s.albums);
+    return this.#layout.allAlbums();
   }
 
   #attachAllAlbumListeners() {
@@ -338,56 +308,9 @@ class PlGallery extends HTMLElement {
     }
     this.#attachAllAlbumListeners();
     requestAnimationFrame(() => {
-      this.#selectivelyPaintAlbums();
-      this.#updateNavBtnState();
-      this.#pushIndexLayout();
+      this.#layout.selectivelyPaint();
+      this.#layout.refreshIndexLayout();
     });
-  }
-
-  // Snapshot each day-section's geometry and push it (plus gallery scroll
-  // metrics) to the index. Called after layout changes (initial render,
-  // album height change, resize, day-section mode toggle). Cheap enough to
-  // run on every layout event.
-  #pushIndexLayout = () => {
-    let indexEl = this.shadowRoot.getElementById('gallery-index');
-    if (!indexEl) return;
-    let galleryEl = this.shadowRoot.getElementById('gallery');
-    if (!galleryEl) return;
-
-    let dayOffsets = this.#daySections.map(s => ({
-      day: s.day,
-      offsetTop: s.offsetTop,
-      offsetHeight: s.offsetHeight
-    }));
-
-    indexEl.updateLayout({
-      dayOffsets,
-      scrollHeight: galleryEl.scrollHeight,
-      clientHeight: galleryEl.clientHeight
-    });
-    indexEl.updateScroll(galleryEl.scrollTop);
-  }
-
-  #handleIndexJump = (evt) => {
-    let day = evt.detail?.day;
-    if (!day) return;
-    let section = this.#daySections.find(s => s.day === day);
-    if (!section) return;
-    let galleryEl = this.shadowRoot.getElementById('gallery');
-    this.#isJumping = true;
-    galleryEl.scrollTo({ top: section.offsetTop, behavior: 'smooth' });
-  }
-
-  #handleIndexScrub = (evt) => {
-    let galleryEl = this.shadowRoot.getElementById('gallery');
-    if (!galleryEl) return;
-    this.#isScrubbing = true;
-    galleryEl.scrollTop = evt.detail.scrollTop;
-  }
-
-  #handleIndexScrubEnd = () => {
-    this.#isScrubbing = false;
-    this.#selectivelyPaintAlbums();
   }
 
   #handleItemsSelected = (evt) => {
@@ -689,11 +612,9 @@ class PlGallery extends HTMLElement {
       let allUuids = this.#data.flatMap(d => d.items.map(i => i.data.id));
       await emptyTrash(1, allUuids);
       // remove all day sections
-      for (let s of this.#daySections) s.remove();
-      this.#daySections = [];
-      this.#albumsInBuffer.clear();
+      this.#layout.clearSections();
       this.#updateTrashCount();
-      this.#pushIndexLayout();
+      this.#layout.refreshIndexLayout();
       notify('Trash emptied', 'success');
     } catch(err) {
       notify(`<strong>Error</strong>:</br>${err.error?.message || err}`, 'error', -1);
@@ -709,12 +630,12 @@ class PlGallery extends HTMLElement {
   #handleAlbumHeightChange = () => {
     // With normal flow (flex column) for day-sections + albums, the browser
     // recomputes layout after a child height change. We just need to repaint
-    // visible thumbs.
-    this.#selectivelyPaintAlbums();
-    this.#pushIndexLayout();
+    // visible thumbs and refresh the index geometry.
+    this.#layout.selectivelyPaint();
+    this.#layout.refreshIndexLayout();
     setTimeout(() => {
-      this.#selectivelyPaintAlbums();
-      this.#pushIndexLayout();
+      this.#layout.selectivelyPaint();
+      this.#layout.refreshIndexLayout();
     }, 300);
   }
 
@@ -728,175 +649,17 @@ class PlGallery extends HTMLElement {
       if (idx !== -1) {
         albumEl.remove();
         section.albums.splice(idx, 1);
-        this.#albumsInBuffer.delete(albumEl);
+        this.#layout.forgetAlbum(albumEl);
 
         // If the day-section is now empty, remove it too
         if (section.albums.length === 0) {
-          let sIdx = this.#daySections.indexOf(section);
-          if (sIdx !== -1) {
-            section.remove();
-            this.#daySections.splice(sIdx, 1);
-          }
+          this.#layout.removeSection(section);
         }
         break;
       }
     }
 
     this.#handleAlbumHeightChange();
-  }
-
-  #selectivelyPaintAlbums(forceRepaint = true) {
-    let galleryEl = this.shadowRoot.getElementById('gallery');
-    let scrollTop = -galleryEl.scrollTop;
-    let viewportHeight = galleryEl.clientHeight;
-    let bufferTop = viewportHeight * -this.#paintBuffer;
-    let bufferBottom = viewportHeight * (1 + this.#paintBuffer);
-
-    for (let section of this.#daySections) {
-      let sectionTop = section.offsetTop + scrollTop;
-      let sectionBottom = sectionTop + section.offsetHeight;
-
-      let intersectsBuffer =
-        (sectionBottom >= bufferTop && sectionBottom <= bufferBottom) ||
-        (sectionTop >= bufferTop && sectionTop <= bufferBottom) ||
-        (sectionTop <= bufferTop && sectionBottom >= bufferBottom);
-
-      if (intersectsBuffer) {
-        // Day-section partially or fully visible. Drill into albums.
-        for (let album of section.albums) {
-          let albumTop = section.offsetTop + album.offsetTop + scrollTop;
-          let albumBottom = albumTop + album.album_height;
-
-          let albumBottomInBuffer = albumBottom >= bufferTop && albumBottom <= bufferBottom;
-          let albumTopInBuffer = albumTop >= bufferTop && albumTop <= bufferBottom;
-          let albumEncompassesBuffer = albumTop <= bufferTop && albumBottom >= bufferBottom;
-
-          // Shortcut: don't repaint if already fully loaded and unchanged
-          // (only matters during scroll, not for forced repaints).
-          if (
-            !forceRepaint &&
-            this.#albumsInBuffer.get(album) === 'full' &&
-            albumBottomInBuffer && albumTopInBuffer
-          ) {
-            continue;
-          }
-
-          if (albumEncompassesBuffer) {
-            this.#albumsInBuffer.set(album, 'buffer-overflow');
-            album.selectivelyPaintLayout(bufferTop, bufferBottom, albumTop);
-          } else if (albumBottomInBuffer || albumTopInBuffer) {
-            album.selectivelyPaintLayout(bufferTop, bufferBottom, albumTop);
-            this.#albumsInBuffer.set(album,
-              (albumBottomInBuffer && albumTopInBuffer) ? 'full' : 'partial');
-          } else {
-            if (this.#albumsInBuffer.has(album)) {
-              album.selectivelyPaintLayout(bufferTop, bufferBottom, albumTop);
-              this.#albumsInBuffer.delete(album);
-            }
-          }
-        }
-      } else {
-        // Day-section out of buffer entirely. Unpaint any of its albums
-        // that were previously painted.
-        for (let album of section.albums) {
-          if (this.#albumsInBuffer.has(album)) {
-            let albumTop = section.offsetTop + album.offsetTop + scrollTop;
-            album.selectivelyPaintLayout(bufferTop, bufferBottom, albumTop);
-            this.#albumsInBuffer.delete(album);
-          }
-        }
-      }
-    }
-  }
-
-  #scrollToNextAlbum = () => {
-    let gallery = this.shadowRoot.getElementById('gallery');
-    let scrollTop = gallery.scrollTop;
-    for (let section of this.#daySections) {
-      for (let album of section.albums) {
-        let albumTop = section.offsetTop + album.offsetTop;
-        if (albumTop > scrollTop + 1) {
-          gallery.scrollTo({ top: albumTop, behavior: 'smooth' });
-          return;
-        }
-      }
-    }
-  }
-
-  #scrollToPrevAlbum = () => {
-    let gallery = this.shadowRoot.getElementById('gallery');
-    let scrollTop = gallery.scrollTop;
-    let target = null;
-    for (let section of this.#daySections) {
-      for (let album of section.albums) {
-        let albumTop = section.offsetTop + album.offsetTop;
-        if (albumTop < scrollTop - 1) target = albumTop;
-        else break;
-      }
-    }
-    if (target !== null) gallery.scrollTo({ top: target, behavior: 'smooth' });
-  }
-
-  #updateNavBtnState = () => {
-    let gallery = this.shadowRoot.getElementById('gallery');
-    let scrollTop = gallery.scrollTop;
-    let maxScroll = gallery.scrollHeight - gallery.clientHeight;
-    let albums = this.#allAlbums();
-    let firstAlbumTop = albums.length > 0
-      ? this.#daySections[0].offsetTop + albums[0].offsetTop
-      : 0;
-    let lastSection = this.#daySections[this.#daySections.length - 1];
-    let lastAlbum = albums[albums.length - 1];
-    let lastAlbumTop = (lastSection && lastAlbum)
-      ? lastSection.offsetTop + lastAlbum.offsetTop
-      : 0;
-    this.shadowRoot.getElementById('prev-album-btn').disabled =
-      scrollTop <= firstAlbumTop + 1;
-    this.shadowRoot.getElementById('next-album-btn').disabled =
-      scrollTop >= lastAlbumTop - 1 || scrollTop >= maxScroll - 1;
-  }
-
-  // Scroll handler with two cadences:
-  //  - Per-frame (rAF-deduped): cheap update of the index marker so it
-  //    tracks scroll smoothly without throttle-induced step lag. The index
-  //    component internally manages its visibility state machine based on
-  //    updateScroll / notifyScrollStop calls.
-  //  - Throttled (100ms): heavier work that doesn't need frame-rate
-  //    cadence -- selective album painting and nav-button state.
-  #handleScroll = () => {
-    if (!this.#markerRafPending) {
-      this.#markerRafPending = true;
-      requestAnimationFrame(() => {
-        this.#markerRafPending = false;
-        if (!this.isConnected) return;
-        let indexEl = this.shadowRoot.getElementById('gallery-index');
-        let galleryEl = this.shadowRoot.getElementById('gallery');
-        if (!indexEl || !galleryEl) return;
-        indexEl.updateScroll(galleryEl.scrollTop);
-      });
-    }
-    // Reset the scroll-stop detection timer. When it fires, it tells the
-    // index that scrolling has ceased so it can start its hide countdown.
-    if (this.#indexScrollTimer) clearTimeout(this.#indexScrollTimer);
-    this.#indexScrollTimer = setTimeout(() => {
-      this.#indexScrollTimer = null;
-      let indexEl = this.shadowRoot.getElementById('gallery-index');
-      if (indexEl) indexEl.notifyScrollStop();
-    }, 150); // short debounce to detect "scroll stopped"
-    this.#throttledHeavyScroll();
-  }
-
-  #throttledHeavyScroll = throttle(() => {
-    if (!this.#isJumping && !this.#isScrubbing) this.#selectivelyPaintAlbums(false);
-    this.#updateNavBtnState();
-  }, 100);
-
-  #handleScrollEnd = () => {
-    if (this.#isJumping) {
-      this.#isJumping = false;
-      this.#selectivelyPaintAlbums();
-    }
-    this.#updateNavBtnState();
   }
 
   // --- Drag-select sweep -------------------------------------------------
@@ -939,14 +702,14 @@ class PlGallery extends HTMLElement {
     this.#isSweeping = true;
     this.#sweepRange = [this.#sweepAnchorIdx, this.#sweepAnchorIdx];
 
-    let galleryEl = this.shadowRoot.getElementById('gallery');
+    let galleryEl = this.#layout;
     if (!galleryEl) return;
     // Suppress native scroll while sweeping. The move listener is non-passive
     // (preventDefault). Scroll suppression is reliable because the long-press
     // required the finger to stay within 10px, so no scroll has begun. The
     // heavy lifting for touch is done on the thumb img (touch-action:none +
     // touchmove preventDefault); this is a secondary guard.
-    galleryEl.classList.add('sweeping');
+    galleryEl.setSweeping(true);
     galleryEl.addEventListener('pointermove', this.#handleSweepMove, { passive: false });
     galleryEl.addEventListener('pointerup', this.#handleSweepEnd);
     galleryEl.addEventListener('pointercancel', this.#handleSweepEnd);
@@ -970,7 +733,7 @@ class PlGallery extends HTMLElement {
   // anchor..current in timeline order. Shared by pointermove and the
   // auto-scroll tick. No-op if no item is under the point.
   #updateSweepRangeAt(x, y) {
-    let hit = this.#itemAtPoint(x, y);
+    let hit = this.#layout.itemAtPoint(x, y);
     if (!hit) return;
 
     let curIdx = this.#sweepIndexById.get(String(hit.item.data.id));
@@ -1014,7 +777,7 @@ class PlGallery extends HTMLElement {
   }
 
   #updateAutoScroll(py) {
-    let gallery = this.shadowRoot.getElementById('gallery');
+    let gallery = this.#layout;
     if (!gallery) return;
     let rect = gallery.getBoundingClientRect();
 
@@ -1063,7 +826,7 @@ class PlGallery extends HTMLElement {
     this.#autoScrollRaf = null;
     if (!this.#isSweeping || this.#autoScrollVel === 0) return;
 
-    let gallery = this.shadowRoot.getElementById('gallery');
+    let gallery = this.#layout;
     if (!gallery) return;
 
     let maxScroll = gallery.scrollHeight - gallery.clientHeight;
@@ -1075,8 +838,8 @@ class PlGallery extends HTMLElement {
     // re-run the range computation so the selection extends. Clamp the y just
     // inside the viewport so a finger parked exactly at (or past) the edge
     // still hit-tests onto the edge-most item instead of failing the
-    // out-of-viewport reject in #itemAtPoint. The native scroll event also
-    // fires and repaints newly revealed albums.
+    // out-of-viewport reject in the layout's itemAtPoint. The native scroll
+    // event also fires and repaints newly revealed albums.
     if (moved) {
       let rect = gallery.getBoundingClientRect();
       // Keep the re-hit-test point below the controls bar (see #sweepTopEdge)
@@ -1129,45 +892,15 @@ class PlGallery extends HTMLElement {
     this.#sweepBaseline = null;
     this.#sweepRange = null;
     this.#sweepAnchorIdx = -1;
-    let galleryEl = this.shadowRoot.getElementById('gallery');
+    let galleryEl = this.#layout;
     if (!galleryEl) return;
-    galleryEl.classList.remove('sweeping');
+    galleryEl.setSweeping(false);
     galleryEl.removeEventListener('pointermove', this.#handleSweepMove);
     galleryEl.removeEventListener('pointerup', this.#handleSweepEnd);
     galleryEl.removeEventListener('pointercancel', this.#handleSweepEnd);
   }
 
   // Hit-test a viewport point against every item's rect, inverting the same
-  // geometry used by #getThumbRect. Returns { album, item } or null. Works
-  // across album/day boundaries since we walk all sections.
-  #itemAtPoint(px, py) {
-    let gallery = this.shadowRoot.getElementById('gallery');
-    let galleryRect = gallery.getBoundingClientRect();
-    let scrollTop = gallery.scrollTop;
-
-    // Quick reject: point outside the gallery viewport.
-    if (px < galleryRect.left || px > galleryRect.right ||
-        py < galleryRect.top || py > galleryRect.bottom) {
-      return null;
-    }
-
-    for (let section of this.#daySections) {
-      for (let album of section.albums) {
-        for (let item of album.data) {
-          if (!item.layout || item.layout.trX == null) continue;
-          let x = galleryRect.left + parseFloat(item.layout.trX);
-          let y = galleryRect.top + section.offsetTop + album.offsetTop +
-                  item.layout.offsetHeight - scrollTop;
-          let w = item.layout.width;
-          let h = item.layout.height;
-          if (px >= x && px <= x + w && py >= y && py <= y + h) {
-            return { album, item };
-          }
-        }
-      }
-    }
-    return null;
-  }
   // --- end drag-select sweep ---------------------------------------------
 
   // --- Mobile square-grid layout + pinch-to-zoom -------------------------
@@ -1189,97 +922,15 @@ class PlGallery extends HTMLElement {
     try { localStorage.setItem(this.constructor.LAYOUT_MODE_KEY, mode); } catch (e) { /* ignore */ }
   }
 
-  // Switch the effective layout mode. Fans the mode out to every day-section
-  // (and thus album), then repaints. Anchors the item under `anchorClientY`
-  // (a viewport y-coordinate) so the same content stays under the user's
-  // fingers across the reflow. Persists the choice.
+  // Switch the effective layout mode. The layout component owns the reflow,
+  // anchor scroll, repaint, and its own nav-button + index refresh; here we
+  // just keep our mirror of the mode and persist it.
   #setLayoutMode(mode, anchorClientY) {
     mode = mode === 'square' ? 'square' : 'aspect';
-    if (mode === this.#layoutMode) return;
-
-    let galleryEl = this.shadowRoot.getElementById('gallery');
-    let galleryRect = galleryEl.getBoundingClientRect();
-
-    // Find the anchor item currently under anchorClientY (fall back to the
-    // gallery's vertical middle) and remember its offset from the viewport
-    // top so we can restore it after the reflow.
-    let anchorY = (anchorClientY == null) ? galleryRect.top + galleryRect.height / 2 : anchorClientY;
-    let anchor = this.#itemAtPoint(galleryRect.left + galleryRect.width / 2, anchorY)
-              || this.#firstVisibleItem();
-    let anchorOffsetInView = null;
-    let anchorId = null;
-    if (anchor) {
-      anchorId = anchor.item.data.id;
-      let rectTop = this.#itemViewportTop(anchor.section || null, anchor.album, anchor.item);
-      anchorOffsetInView = rectTop - galleryRect.top;
-    }
-
+    let changed = this.#layout.setLayoutMode(mode, anchorClientY);
+    if (!changed) return;
     this.#layoutMode = mode;
     this.#persistLayoutMode(mode);
-    for (let section of this.#daySections) section.layoutMode = mode;
-
-    // Correct scrollTop to restore the anchor BEFORE painting. The new
-    // per-item offsets are already set (each album relayouts synchronously on
-    // the layoutMode set above), so #itemGalleryTop reads the new layout. If we
-    // painted first (against the old scrollTop but the new, much taller
-    // layout), visible thumbs near the pinch would test out-of-buffer, get
-    // evicted (x.elem removed + nulled), then be recreated by a later paint --
-    // recreating the <img> re-fires its load and the blur-in animation. Fixing
-    // the scroll position first means visible thumbs stay in-buffer and go
-    // through #paintItem's update branch (reposition/restyle the existing
-    // <img>, same src, no reload/blur).
-    if (anchorId != null && anchorOffsetInView != null) {
-      let newTop = this.#itemGalleryTop(anchorId);
-      if (newTop != null) {
-        galleryEl.scrollTop = Math.max(0, newTop - anchorOffsetInView);
-      }
-    }
-
-    // Single paint against the corrected scroll position.
-    this.#selectivelyPaintAlbums();
-    this.#updateNavBtnState();
-    this.#pushIndexLayout();
-  }
-
-  // Viewport-space top of an item, using the same geometry as #getThumbRect.
-  #itemViewportTop(section, album, item) {
-    let gallery = this.shadowRoot.getElementById('gallery');
-    let galleryRect = gallery.getBoundingClientRect();
-    // section may be unknown (hit-test only returns album+item); find it.
-    let sec = section || this.#daySections.find(s => s.albums.includes(album));
-    if (!sec) return galleryRect.top;
-    return galleryRect.top + sec.offsetTop + album.offsetTop + item.layout.offsetHeight - gallery.scrollTop;
-  }
-
-  // Gallery-content-space top of an item by id (independent of scroll).
-  #itemGalleryTop(id) {
-    for (let section of this.#daySections) {
-      for (let album of section.albums) {
-        let item = album.data.find(x => x.data.id === id);
-        if (item && item.layout) {
-          return section.offsetTop + album.offsetTop + item.layout.offsetHeight;
-        }
-      }
-    }
-    return null;
-  }
-
-  // First painted item intersecting the top of the viewport (anchor fallback).
-  #firstVisibleItem() {
-    let gallery = this.shadowRoot.getElementById('gallery');
-    let scrollTop = gallery.scrollTop;
-    for (let section of this.#daySections) {
-      for (let album of section.albums) {
-        for (let item of album.data) {
-          if (!item.layout || item.layout.offsetHeight == null) continue;
-          let top = section.offsetTop + album.offsetTop + item.layout.offsetHeight;
-          if (top + item.layout.height >= scrollTop) {
-            return { section, album, item };
-          }
-        }
-      }
-    }
-    return null;
   }
 
   #pinchDistance(t0, t1) {
@@ -1336,35 +987,25 @@ class PlGallery extends HTMLElement {
   #handleResize() {
     // Re-evaluate the effective layout mode purely on viewport width. Above
     // the mobile breakpoint force 'aspect' (feature disabled); at/below it,
-    // honor the persisted choice (default 'square'). This runs before the
-    // width/redoLayout pass so albums lay out in the correct mode.
+    // honor the persisted choice (default 'square'). The layout applies the
+    // mode (if changed) and re-runs layout at the new width.
     let desired = this.#resolveInitialLayoutMode();
-    if (desired !== this.#layoutMode) {
-      this.#layoutMode = desired;
-      for (let section of this.#daySections) section.layoutMode = desired;
-    }
-    for (let section of this.#daySections) {
-      section.width = this.shadowRoot.getElementById('gallery').clientWidth;
-      section.redoLayout();
-    }
-    this.#selectivelyPaintAlbums();
-    this.#pushIndexLayout();
+    this.#layoutMode = desired;
+    this.#layout.redoLayout(desired);
   }
   #throttleHandleResize = throttle(() => this.#handleResize(), 100);
 
   disconnectedCallback() {
-    let galleryEl = this.shadowRoot.getElementById('gallery');
-    galleryEl?.removeEventListener('scroll', this.#handleScroll);
-    galleryEl?.removeEventListener('scrollend', this.#handleScrollEnd);
+    let layout = this.#layout;
     // Defensive: if disconnected mid-sweep, remove the transient listeners.
-    galleryEl?.removeEventListener('pointermove', this.#handleSweepMove);
-    galleryEl?.removeEventListener('pointerup', this.#handleSweepEnd);
-    galleryEl?.removeEventListener('pointercancel', this.#handleSweepEnd);
+    layout?.removeEventListener('pointermove', this.#handleSweepMove);
+    layout?.removeEventListener('pointerup', this.#handleSweepEnd);
+    layout?.removeEventListener('pointercancel', this.#handleSweepEnd);
     this.removeEventListener('pl-thumb-longpress-armed', this.#handleLongPressArmed);
-    galleryEl?.removeEventListener('touchstart', this.#handlePinchStart);
-    galleryEl?.removeEventListener('touchmove', this.#handlePinchMove);
-    galleryEl?.removeEventListener('touchend', this.#handlePinchEnd);
-    galleryEl?.removeEventListener('touchcancel', this.#handlePinchEnd);
+    layout?.removeEventListener('touchstart', this.#handlePinchStart);
+    layout?.removeEventListener('touchmove', this.#handlePinchMove);
+    layout?.removeEventListener('touchend', this.#handlePinchEnd);
+    layout?.removeEventListener('touchcancel', this.#handlePinchEnd);
     this.#pinchState = null;
     this.#isSweeping = false;
     this.#stopAutoScroll();
@@ -1372,13 +1013,7 @@ class PlGallery extends HTMLElement {
     this.#sweepIndexById = null;
     this.#sweepBaseline = null;
     this.#sweepRange = null;
-    this.shadowRoot.getElementById('next-album-btn')?.removeEventListener('click', this.#scrollToNextAlbum);
-    this.shadowRoot.getElementById('prev-album-btn')?.removeEventListener('click', this.#scrollToPrevAlbum);
     window.removeEventListener('resize', this.#throttleHandleResize);
-    if (this.#indexScrollTimer) {
-      clearTimeout(this.#indexScrollTimer);
-      this.#indexScrollTimer = null;
-    }
   }
 
   attributeChangedCallback() { /* unused */ }
@@ -1428,7 +1063,7 @@ class PlGallery extends HTMLElement {
       mode: this.#mode
     });
 
-    this.shadowRoot.getElementById('nav-btns').style.display = 'none';
+    this.#layout.setNavButtonsVisible(false);
     this.shadowRoot.appendChild(slideshow);
 
     this.dispatchEvent(new CustomEvent('pl-gallery-slideshow-opened', {
@@ -1449,9 +1084,9 @@ class PlGallery extends HTMLElement {
       }
     }
 
-    this.shadowRoot.getElementById('nav-btns').style.display = '';
+    this.#layout.setNavButtonsVisible(true);
 
-    let thumbRect = currentItemId ? this.#getThumbRect(currentItemId) : null;
+    let thumbRect = currentItemId ? this.#layout.getThumbRect(currentItemId) : null;
     let mediaRect = slideshow.prepareForDismiss();
 
     if (!thumbRect || !mediaRect) {
@@ -1483,41 +1118,6 @@ class PlGallery extends HTMLElement {
       slideshow.remove();
       this.dispatchEvent(new Event('pl-gallery-slideshow-closed', { composed: true, bubbles: true }));
     });
-  }
-
-  #getThumbRect(id) {
-    let gallery = this.shadowRoot.getElementById('gallery');
-    let galleryRect = gallery.getBoundingClientRect();
-
-    for (let section of this.#daySections) {
-      for (let album of section.albums) {
-        let item = album.data.find(x => x.data.id === id);
-        if (item) {
-          return {
-            x: galleryRect.left + parseFloat(item.layout.trX),
-            y: galleryRect.top + section.offsetTop + album.offsetTop + item.layout.offsetHeight - gallery.scrollTop,
-            w: item.layout.width,
-            h: item.layout.height
-          };
-        }
-      }
-    }
-    return null;
-  }
-
-  #scrollToItem(id) {
-    for (let section of this.#daySections) {
-      for (let album of section.albums) {
-        let item = album.data.find(x => x.data.id === id);
-        if (item) {
-          let gallery = this.shadowRoot.getElementById('gallery');
-          let targetTop = section.offsetTop + album.offsetTop + item.layout.offsetHeight;
-          let centered = targetTop - (gallery.clientHeight - item.layout.height) / 2;
-          gallery.scrollTo({ top: centered });
-          return;
-        }
-      }
-    }
   }
 
 }

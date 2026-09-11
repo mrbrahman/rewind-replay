@@ -13,77 +13,8 @@
   color: var(--text-secondary);
 }
 
-#gallery {
-  position: relative;
-  overflow-y: scroll;
-  height: 100%;
-  /* Scrollbar hidden - the pl-gallery-index marker pill serves as both
-     position indicator and scrub handle, replacing the native scrollbar. */
-  scrollbar-width: none;
-}
-
-#gallery::-webkit-scrollbar {
-  display: none;
-}
-
-/* While a drag-select sweep is active, disable native scrolling/gestures so
-   the pointer can follow thumbs without the gallery scrolling underneath.
-   Toggled by pl-gallery adding/removing the .sweeping class. */
-#gallery.sweeping {
-  touch-action: none;
-}
-
-pl-day-section {
-  width: 100%;
-}
-
 :host {
   display: block;
   position: relative;
   height: 100%;
-}
-
-#nav-btns {
-  position: fixed;
-  bottom: 3vh;
-  right: 30px;
-  display: flex;
-  flex-direction: column;
-  z-index: 10;
-  transition: opacity 0.2s ease;
-}
-
-/* When the gallery index is visible (actively scrolling), fade the chevron
-   nav buttons out. They serve overlapping purposes and would otherwise sit
-   on top of the rail. */
-:host(:has(pl-gallery-index[data-vis="full"])) #nav-btns {
-  opacity: 0;
-  pointer-events: none;
-}
-
-#nav-btns sl-icon-button {
-  font-size: 1.5rem;
-  background: rgba(0, 0, 0, 0.5);
-  color: white;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-}
-
-#nav-btns sl-icon-button:first-child {
-  border-radius: 50% 50% 0 0;
-}
-
-#nav-btns sl-icon-button:last-child {
-  border-radius: 0 0 50% 50%;
-}
-
-#nav-btns sl-icon-button:hover {
-  opacity: 1;
-}
-
-@media (max-width: 640px) {
-  #nav-btns {
-    bottom: 2vh;
-    right: 10px;
-  }
 }
